@@ -1,0 +1,665 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * tsh \PYGZhy{} A tiny shell program with job control}
+\PYG{c+cm}{ * }
+\PYG{c+cm}{ * \PYGZlt{}2019\PYGZhy{}13674  user102\PYGZgt{}}
+\PYG{c+cm}{ */}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdio.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdlib.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}unistd.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}string.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}ctype.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}signal.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}sys/types.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}sys/wait.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}errno.h\PYGZgt{}}
+
+\PYG{c+cm}{/* Misc manifest constants */}
+\PYG{c+cp}{\PYGZsh{}define MAXLINE    1024   }\PYG{c+cm}{/* max line size */}
+\PYG{c+cp}{\PYGZsh{}define MAXARGS     128   }\PYG{c+cm}{/* max args on a command line */}
+\PYG{c+cp}{\PYGZsh{}define MAXJOBS      16   }\PYG{c+cm}{/* max jobs at any point in time */}
+\PYG{c+cp}{\PYGZsh{}define MAXJID    1\PYGZlt{}\PYGZlt{}16   }\PYG{c+cm}{/* max job ID */}
+
+\PYG{c+cm}{/* Job states */}
+\PYG{c+cp}{\PYGZsh{}define UNDEF 0 }\PYG{c+cm}{/* undefined */}
+\PYG{c+cp}{\PYGZsh{}define FG 1    }\PYG{c+cm}{/* running in foreground */}
+\PYG{c+cp}{\PYGZsh{}define BG 2    }\PYG{c+cm}{/* running in background */}
+\PYG{c+cp}{\PYGZsh{}define ST 3    }\PYG{c+cm}{/* stopped */}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * Jobs states: FG (foreground), BG (background), ST (stopped)}
+\PYG{c+cm}{ * Job state transitions and enabling actions:}
+\PYG{c+cm}{ *     FG \PYGZhy{}\PYGZgt{} ST  : ctrl\PYGZhy{}z}
+\PYG{c+cm}{ *     ST \PYGZhy{}\PYGZgt{} FG  : fg command}
+\PYG{c+cm}{ *     ST \PYGZhy{}\PYGZgt{} BG  : bg command}
+\PYG{c+cm}{ *     BG \PYGZhy{}\PYGZgt{} FG  : fg command}
+\PYG{c+cm}{ * At most 1 job can be in the FG state.}
+\PYG{c+cm}{ */}
+
+\PYG{c+cm}{/* Global variables */}
+\PYG{k}{extern} \PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{environ}\PYG{p}{;}      \PYG{c+cm}{/* defined in libc */}
+\PYG{k+kt}{char} \PYG{n}{prompt}\PYG{p}{[]} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}tsh\PYGZgt{} \PYGZdq{}}\PYG{p}{;}    \PYG{c+cm}{/* command line prompt (DO NOT CHANGE) */}
+\PYG{k+kt}{int} \PYG{n}{verbose} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}            \PYG{c+cm}{/* if true, print additional output */}
+\PYG{k+kt}{int} \PYG{n}{nextjid} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}            \PYG{c+cm}{/* next job ID to allocate */}
+\PYG{k+kt}{char} \PYG{n}{sbuf}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}         \PYG{c+cm}{/* for composing sprintf messages */}
+
+\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{p}{\PYGZob{}}              \PYG{c+cm}{/* The job struct */}
+    \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{;}              \PYG{c+cm}{/* job PID */}
+    \PYG{k+kt}{int} \PYG{n}{jid}\PYG{p}{;}                \PYG{c+cm}{/* job ID [1, 2, ...] */}
+    \PYG{k+kt}{int} \PYG{n}{state}\PYG{p}{;}              \PYG{c+cm}{/* UNDEF, BG, FG, or ST */}
+    \PYG{k+kt}{char} \PYG{n}{cmdline}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}  \PYG{c+cm}{/* command line */}
+\PYG{p}{\PYGZcb{};}
+\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{MAXJOBS}\PYG{p}{];} \PYG{c+cm}{/* The job list */}
+\PYG{c+cm}{/* End global variables */}
+
+
+\PYG{c+cm}{/* Function prototypes */}
+
+\PYG{c+cm}{/* Here are the functions that you will implement */}
+\PYG{k+kt}{void} \PYG{n+nf}{eval}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{cmdline}\PYG{p}{);}
+\PYG{k+kt}{int} \PYG{n+nf}{builtin\PYGZus{}cmd}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{do\PYGZus{}bgfg}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{waitfg}\PYG{p}{(}\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{);}
+
+\PYG{k+kt}{void} \PYG{n+nf}{sigchld\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{sigtstp\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{sigint\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{);}
+
+\PYG{c+cm}{/* Here are helper routines that we\PYGZsq{}ve provided for you */}
+\PYG{k+kt}{int} \PYG{n+nf}{parseline}\PYG{p}{(}\PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{cmdline}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{);} 
+\PYG{k+kt}{void} \PYG{n+nf}{sigquit\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{);}
+
+\PYG{k+kt}{void} \PYG{n+nf}{clearjob}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{job}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{initjobs}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{);}
+\PYG{k+kt}{int} \PYG{n+nf}{maxjid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{);} 
+\PYG{k+kt}{int} \PYG{n+nf}{addjob}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{,} \PYG{k+kt}{int} \PYG{n}{state}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{cmdline}\PYG{p}{);}
+\PYG{k+kt}{int} \PYG{n+nf}{deletejob}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{);} 
+\PYG{k+kt}{pid\PYGZus{}t} \PYG{n+nf}{fgpid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{);}
+\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n+nf}{getjobpid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{);}
+\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n+nf}{getjobjid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{int} \PYG{n}{jid}\PYG{p}{);} 
+\PYG{k+kt}{int} \PYG{n+nf}{pid2jid}\PYG{p}{(}\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{);} 
+\PYG{k+kt}{void} \PYG{n+nf}{listjobs}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{);}
+
+\PYG{k+kt}{void} \PYG{n+nf}{usage}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{unix\PYGZus{}error}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{msg}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{app\PYGZus{}error}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{msg}\PYG{p}{);}
+\PYG{k}{typedef} \PYG{k+kt}{void} \PYG{n+nf}{handler\PYGZus{}t}\PYG{p}{(}\PYG{k+kt}{int}\PYG{p}{);}
+\PYG{n}{handler\PYGZus{}t} \PYG{o}{*}\PYG{n+nf}{Signal}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{signum}\PYG{p}{,} \PYG{n}{handler\PYGZus{}t} \PYG{o}{*}\PYG{n}{handler}\PYG{p}{);}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * main \PYGZhy{} The shell\PYGZsq{}s main routine }
+\PYG{c+cm}{ */}
+\PYG{k+kt}{int} \PYG{n+nf}{main}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{argc}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{n}{c}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{cmdline}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}
+    \PYG{k+kt}{int} \PYG{n}{emit\PYGZus{}prompt} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;} \PYG{c+cm}{/* emit prompt (default) */}
+
+    \PYG{c+cm}{/* Redirect stderr to stdout (so that driver will get all output}
+\PYG{c+cm}{     * on the pipe connected to stdout) */}
+    \PYG{n}{dup2}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{2}\PYG{p}{);}
+
+    \PYG{c+cm}{/* Parse the command line */}
+    \PYG{k}{while} \PYG{p}{((}\PYG{n}{c} \PYG{o}{=} \PYG{n}{getopt}\PYG{p}{(}\PYG{n}{argc}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}hvp\PYGZdq{}}\PYG{p}{))} \PYG{o}{!=} \PYG{n}{EOF}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{switch} \PYG{p}{(}\PYG{n}{c}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}h\PYGZsq{}}\PYG{o}{:}             \PYG{c+cm}{/* print help message */}
+            \PYG{n}{usage}\PYG{p}{();}
+            \PYG{k}{break}\PYG{p}{;}
+        \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}v\PYGZsq{}}\PYG{o}{:}             \PYG{c+cm}{/* emit additional diagnostic info */}
+            \PYG{n}{verbose} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{k}{break}\PYG{p}{;}
+        \PYG{k}{case} \PYG{l+s+sc}{\PYGZsq{}p\PYGZsq{}}\PYG{o}{:}             \PYG{c+cm}{/* don\PYGZsq{}t print a prompt */}
+            \PYG{n}{emit\PYGZus{}prompt} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}  \PYG{c+cm}{/* handy for automatic testing */}
+            \PYG{k}{break}\PYG{p}{;}
+        \PYG{k}{default}\PYG{o}{:}
+            \PYG{n}{usage}\PYG{p}{();}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{c+cm}{/* Install the signal handlers */}
+
+    \PYG{c+cm}{/* These are the ones you will need to implement */}
+    \PYG{n}{Signal}\PYG{p}{(}\PYG{n}{SIGINT}\PYG{p}{,}  \PYG{n}{sigint\PYGZus{}handler}\PYG{p}{);}   \PYG{c+cm}{/* ctrl\PYGZhy{}c */}
+    \PYG{n}{Signal}\PYG{p}{(}\PYG{n}{SIGTSTP}\PYG{p}{,} \PYG{n}{sigtstp\PYGZus{}handler}\PYG{p}{);}  \PYG{c+cm}{/* ctrl\PYGZhy{}z */}
+    \PYG{n}{Signal}\PYG{p}{(}\PYG{n}{SIGCHLD}\PYG{p}{,} \PYG{n}{sigchld\PYGZus{}handler}\PYG{p}{);}  \PYG{c+cm}{/* Terminated or stopped child */}
+
+    \PYG{c+cm}{/* This one provides a clean way to kill the shell */}
+    \PYG{n}{Signal}\PYG{p}{(}\PYG{n}{SIGQUIT}\PYG{p}{,} \PYG{n}{sigquit\PYGZus{}handler}\PYG{p}{);} 
+
+    \PYG{c+cm}{/* Initialize the job list */}
+    \PYG{n}{initjobs}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{);}
+
+    \PYG{c+cm}{/* Execute the shell\PYGZsq{}s read/eval loop */}
+    \PYG{k}{while} \PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+
+        \PYG{c+cm}{/* Read command line */}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{emit\PYGZus{}prompt}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s\PYGZdq{}}\PYG{p}{,} \PYG{n}{prompt}\PYG{p}{);}
+            \PYG{n}{fflush}\PYG{p}{(}\PYG{n}{stdout}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{if} \PYG{p}{((}\PYG{n}{fgets}\PYG{p}{(}\PYG{n}{cmdline}\PYG{p}{,} \PYG{n}{MAXLINE}\PYG{p}{,} \PYG{n}{stdin}\PYG{p}{)} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{ferror}\PYG{p}{(}\PYG{n}{stdin}\PYG{p}{))}
+            \PYG{n}{app\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}fgets error\PYGZdq{}}\PYG{p}{);}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{feof}\PYG{p}{(}\PYG{n}{stdin}\PYG{p}{))} \PYG{p}{\PYGZob{}} \PYG{c+cm}{/* End of file (ctrl\PYGZhy{}d) */}
+            \PYG{n}{fflush}\PYG{p}{(}\PYG{n}{stdout}\PYG{p}{);}
+            \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+
+        \PYG{c+cm}{/* Evaluate the command line */}
+        \PYG{n}{eval}\PYG{p}{(}\PYG{n}{cmdline}\PYG{p}{);}
+        \PYG{n}{fflush}\PYG{p}{(}\PYG{n}{stdout}\PYG{p}{);}
+        \PYG{n}{fflush}\PYG{p}{(}\PYG{n}{stdout}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}} 
+
+    \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{);} \PYG{c+cm}{/* control never reaches here */}
+\PYG{p}{\PYGZcb{}}
+  
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * eval \PYGZhy{} Evaluate the command line that the user has just typed in}
+\PYG{c+cm}{ * }
+\PYG{c+cm}{ * If the user has requested a built\PYGZhy{}in command (quit, jobs, bg or fg)}
+\PYG{c+cm}{ * then execute it immediately. Otherwise, fork a child process and}
+\PYG{c+cm}{ * run the job in the context of the child. If the job is running in}
+\PYG{c+cm}{ * the foreground, wait for it to terminate and then return.  Note:}
+\PYG{c+cm}{ * each child process must have a unique process group ID so that our}
+\PYG{c+cm}{ * background children don\PYGZsq{}t receive SIGINT (SIGTSTP) from the kernel}
+\PYG{c+cm}{ * when we type ctrl\PYGZhy{}c (ctrl\PYGZhy{}z) at the keyboard.  }
+\PYG{c+cm}{*/}
+
+\PYG{k+kt}{void} \PYG{n+nf}{eval}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{cmdline}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{argv}\PYG{p}{[}\PYG{n}{MAXARGS}\PYG{p}{];}
+    \PYG{k+kt}{int} \PYG{n}{bg} \PYG{o}{=} \PYG{n}{parseline}\PYG{p}{(}\PYG{n}{cmdline}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{==}\PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+       \PYG{c+c1}{// printf(\PYGZdq{}Empty\PYGZbs{}n\PYGZdq{});}
+       \PYG{k}{return}\PYG{p}{;} 
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+c1}{// process quit, jobs, bg or fg primarily}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{builtin\PYGZus{}cmd}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+        \PYG{k}{return}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{struct} \PYG{n}{sigaction} \PYG{n}{intsig}\PYG{p}{;}
+    \PYG{c+c1}{// prepare signal mask}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{sigemptyset}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{)} \PYG{o}{!=} \PYG{l+m+mi}{0} \PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}sigemptyset failed\PYGZdq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{sigaddset}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n}{SIGCHLD}\PYG{p}{)} \PYG{o}{!=} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}sigaddset(SIGCHLD) failed\PYGZdq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{sigaddset}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n}{SIGINT}\PYG{p}{)} \PYG{o}{!=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}sigaddset(SIGINT) failed\PYGZdq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{sigaddset}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n}{SIGTSTP}\PYG{p}{)} \PYG{o}{!=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} 
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}sigaddset(SIGTSTP) failed\PYGZdq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+c1}{// block signals before calling fork()}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{sigprocmask}\PYG{p}{(}\PYG{n}{SIG\PYGZus{}BLOCK}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{o}{!=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}sigprocmask(SIG\PYGZus{}BLOCK) failed\PYGZdq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k+kt}{int} \PYG{n}{pid} \PYG{o}{=} \PYG{n}{fork}\PYG{p}{();}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZlt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}fork() failed\PYGZdq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{pid} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// child}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{sigprocmask}\PYG{p}{(}\PYG{n}{SIG\PYGZus{}UNBLOCK}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{)}\PYG{o}{!=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Unblock signal}
+            \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}sigprocmask(SIG\PYGZus{}UNBLOCK) failed\PYGZdq{}}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{c+c1}{// Put the child in a new process group whose group ID is identical to the child\PYGZsq{}s PID.}
+        \PYG{c+c1}{// This ensures that there will be only one process, this shell,}
+        \PYG{c+c1}{// in the foreground process group.}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{setpgid}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}setpgid(0,0) failed\PYGZdq{}}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{c+c1}{// Exceute the child program}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{execve}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{n}{argv}\PYG{p}{,} \PYG{n}{environ}\PYG{p}{)} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{//returns \PYGZhy{}1 on error}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s: Command not found.}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]);}
+            \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{c+c1}{//should not reach here}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// parent}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{bg}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Child should run in background.}
+            \PYG{n}{addjob}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,} \PYG{n}{pid}\PYG{p}{,} \PYG{n}{BG}\PYG{p}{,} \PYG{n}{cmdline}\PYG{p}{);}
+            \PYG{n}{sigprocmask}\PYG{p}{(}\PYG{n}{SIG\PYGZus{}UNBLOCK}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);} \PYG{c+c1}{// Unblock signal}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}[\PYGZpc{}d] (\PYGZpc{}d) \PYGZpc{}s\PYGZdq{}}\PYG{p}{,}\PYG{n}{pid2jid}\PYG{p}{(}\PYG{n}{pid}\PYG{p}{),}\PYG{n}{pid}\PYG{p}{,}\PYG{n}{cmdline}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+            \PYG{n}{addjob}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,} \PYG{n}{pid}\PYG{p}{,} \PYG{n}{FG}\PYG{p}{,} \PYG{n}{cmdline}\PYG{p}{);}
+            \PYG{n}{sigprocmask}\PYG{p}{(}\PYG{n}{SIG\PYGZus{}UNBLOCK}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{intsig}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);} \PYG{c+c1}{// Unblock signal}
+            \PYG{n}{waitfg}\PYG{p}{(}\PYG{n}{pid}\PYG{p}{);} \PYG{c+c1}{// Wait for the child to finish}
+            \PYG{k}{return}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}} 
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+c1}{//    printf(\PYGZdq{}\PYGZpc{}s\PYGZdq{}, argv[0]);}
+    \PYG{k}{return}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * parseline \PYGZhy{} Parse the command line and build the argv array.}
+\PYG{c+cm}{ * }
+\PYG{c+cm}{ * Characters enclosed in single quotes are treated as a single}
+\PYG{c+cm}{ * argument.  Return true if the user has requested a BG job, false if}
+\PYG{c+cm}{ * the user has requested a FG job.  }
+\PYG{c+cm}{ */}
+\PYG{k+kt}{int} \PYG{n+nf}{parseline}\PYG{p}{(}\PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{cmdline}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{static} \PYG{k+kt}{char} \PYG{n}{array}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];} \PYG{c+cm}{/* holds local copy of command line */}
+    \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{buf} \PYG{o}{=} \PYG{n}{array}\PYG{p}{;}          \PYG{c+cm}{/* ptr that traverses command line */}
+    \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{delim}\PYG{p}{;}                \PYG{c+cm}{/* points to first space delimiter */}
+    \PYG{k+kt}{int} \PYG{n}{argc}\PYG{p}{;}                   \PYG{c+cm}{/* number of args */}
+    \PYG{k+kt}{int} \PYG{n}{bg}\PYG{p}{;}                     \PYG{c+cm}{/* background job? */}
+
+    \PYG{n}{strcpy}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{n}{cmdline}\PYG{p}{);}
+    \PYG{n}{buf}\PYG{p}{[}\PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{)}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{;}  \PYG{c+cm}{/* replace trailing \PYGZsq{}\PYGZbs{}n\PYGZsq{} with space */}
+    \PYG{k}{while} \PYG{p}{(}\PYG{o}{*}\PYG{n}{buf} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{p}{(}\PYG{o}{*}\PYG{n}{buf} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{))} \PYG{c+cm}{/* ignore leading spaces */}
+        \PYG{n}{buf}\PYG{o}{++}\PYG{p}{;}
+
+    \PYG{c+cm}{/* Build the argv list */}
+    \PYG{n}{argc} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k}{if} \PYG{p}{(}\PYG{o}{*}\PYG{n}{buf} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}\PYGZsq{}\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{buf}\PYG{o}{++}\PYG{p}{;}
+        \PYG{n}{delim} \PYG{o}{=} \PYG{n}{strchr}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}\PYGZsq{}\PYGZsq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{delim} \PYG{o}{=} \PYG{n}{strchr}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{k}{while} \PYG{p}{(}\PYG{n}{delim}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{argv}\PYG{p}{[}\PYG{n}{argc}\PYG{o}{++}\PYG{p}{]} \PYG{o}{=} \PYG{n}{buf}\PYG{p}{;}
+        \PYG{o}{*}\PYG{n}{delim} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+        \PYG{n}{buf} \PYG{o}{=} \PYG{n}{delim} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{;}
+        \PYG{k}{while} \PYG{p}{(}\PYG{o}{*}\PYG{n}{buf} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{p}{(}\PYG{o}{*}\PYG{n}{buf} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{))} \PYG{c+cm}{/* ignore spaces */}
+               \PYG{n}{buf}\PYG{o}{++}\PYG{p}{;}
+
+        \PYG{k}{if} \PYG{p}{(}\PYG{o}{*}\PYG{n}{buf} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}\PYGZsq{}\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{buf}\PYG{o}{++}\PYG{p}{;}
+            \PYG{n}{delim} \PYG{o}{=} \PYG{n}{strchr}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}\PYGZsq{}\PYGZsq{}}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{else} \PYG{p}{\PYGZob{}}
+            \PYG{n}{delim} \PYG{o}{=} \PYG{n}{strchr}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{argv}\PYG{p}{[}\PYG{n}{argc}\PYG{p}{]} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{argc} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)}  \PYG{c+cm}{/* ignore blank line */}
+        \PYG{k}{return} \PYG{l+m+mi}{1}\PYG{p}{;}
+
+    \PYG{c+cm}{/* should the job run in the background? */}
+    \PYG{k}{if} \PYG{p}{((}\PYG{n}{bg} \PYG{o}{=} \PYG{p}{(}\PYG{o}{*}\PYG{n}{argv}\PYG{p}{[}\PYG{n}{argc}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}\PYGZam{}\PYGZsq{}}\PYG{p}{))} \PYG{o}{!=} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{argv}\PYG{p}{[}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{n}{argc}\PYG{p}{]} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{n}{bg}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * builtin\PYGZus{}cmd \PYGZhy{} If the user has typed a built\PYGZhy{}in command then execute}
+\PYG{c+cm}{ *    it immediately.  }
+\PYG{c+cm}{ */}
+\PYG{k+kt}{int} \PYG{n+nf}{builtin\PYGZus{}cmd}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{cmd} \PYG{o}{=} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{];}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{cmd}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}quit\PYGZdq{}}\PYG{p}{)} \PYG{o}{==}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if} \PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{cmd}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}jobs\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{listjobs}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if} \PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{cmd}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}bg\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0} \PYG{o}{||} \PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{cmd}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}fg\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+       \PYG{n}{do\PYGZus{}bgfg}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+       \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}  \PYG{c+cm}{/* not a builtin command */}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{l+m+mi}{1}\PYG{p}{;}    \PYG{c+cm}{/* builtin command is processed */}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * do\PYGZus{}bgfg \PYGZhy{} Execute the builtin bg and fg commands}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{do\PYGZus{}bgfg}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{**}\PYG{n}{argv}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*} \PYG{n}{job}\PYG{p}{;}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+       \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s command requires PID or \PYGZpc{}\PYGZpc{}jobid argument}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]);}
+       \PYG{k}{return}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+c1}{// Handle arguments}
+    \PYG{c+c1}{// Case 1 : PID provided}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{isdigit}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{][}\PYG{l+m+mi}{0}\PYG{p}{]))} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{long} \PYG{n}{pid} \PYG{o}{=} \PYG{n}{strtol}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{][}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{l+m+mi}{10}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s: argument must be a PID or \PYGZpc{}\PYGZpc{}jobid}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]);}
+                \PYG{k}{return}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{job} \PYG{o}{=} \PYG{n}{getjobpid}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,} \PYG{n}{pid}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{job} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}(\PYGZpc{}s): No such process}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]);}
+                \PYG{k}{return}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{c+c1}{// Case 2: Job ID provided}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{][}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}\PYGZpc{}\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{long} \PYG{n}{jid} \PYG{o}{=} \PYG{n}{strtol}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{][}\PYG{l+m+mi}{1}\PYG{p}{],} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{l+m+mi}{10}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{jid} \PYG{o}{\PYGZlt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s: No such job}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]);}
+                \PYG{k}{return}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{job} \PYG{o}{=} \PYG{n}{getjobjid}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,} \PYG{n}{jid}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{job} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s: No such job}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]);}
+                \PYG{k}{return}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s: argument must be a PID or \PYGZpc{}\PYGZpc{}jobid}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]);}
+        \PYG{k}{return}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{l+s}{\PYGZdq{}bg\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{int} \PYG{n}{pid} \PYG{o}{=} \PYG{n}{job} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{pid}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{kill}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{pid}\PYG{p}{,} \PYG{n}{SIGCONT}\PYG{p}{)}\PYG{o}{\PYGZlt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Continue the child process in background}
+            \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}kill failed}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{job} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{state} \PYG{o}{=} \PYG{n}{BG}\PYG{p}{;}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}[\PYGZpc{}d] (\PYGZpc{}d) \PYGZpc{}s\PYGZdq{}}\PYG{p}{,} \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{jid}\PYG{p}{,} \PYG{n}{pid}\PYG{p}{,} \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{cmdline}\PYG{p}{);}
+        \PYG{k}{return}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{l+s}{\PYGZdq{}fg\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{int} \PYG{n}{pid} \PYG{o}{=} \PYG{n}{job} \PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{kill}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{pid}\PYG{p}{,} \PYG{n}{SIGCONT}\PYG{p}{)}\PYG{o}{\PYGZlt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// Continue the child process}
+            \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}kill failed}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{job} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{state} \PYG{o}{=} \PYG{n}{FG}\PYG{p}{;}
+        \PYG{n}{waitfg}\PYG{p}{(}\PYG{n}{pid}\PYG{p}{);} \PYG{c+c1}{// Wait for the child process to finish}
+        \PYG{k}{return}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s: Command not found}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]);}
+        \PYG{k}{return}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * waitfg \PYGZhy{} Block until process pid is no longer the foreground process}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{waitfg}\PYG{p}{(}\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*} \PYG{n}{j} \PYG{o}{=} \PYG{n}{getjobpid}\PYG{p}{(}\PYG{n}{pid}\PYG{p}{);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{j}\PYG{p}{)} \PYG{c+c1}{// Invalid pid}
+        \PYG{k}{return}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{j} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{state} \PYG{o}{==} \PYG{n}{FG}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// The job\PYGZsq{}s state flag will be modified in signal handlers}
+        \PYG{n}{sleep}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);} \PYG{c+c1}{// Wait 1 sec}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*****************}
+\PYG{c+cm}{ * Signal handlers}
+\PYG{c+cm}{ *****************/}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * sigchld\PYGZus{}handler \PYGZhy{} The kernel sends a SIGCHLD to the shell whenever}
+\PYG{c+cm}{ *     a child job terminates (becomes a zombie), or stops because it}
+\PYG{c+cm}{ *     received a SIGSTOP or SIGTSTP signal. The handler reaps all}
+\PYG{c+cm}{ *     available zombie children, but doesn\PYGZsq{}t wait for any other}
+\PYG{c+cm}{ *     currently running children to terminate.  }
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{sigchld\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{status}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{pid}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*} \PYG{n}{job}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{((}\PYG{n}{pid}\PYG{o}{=}\PYG{n}{waitpid}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{,}\PYG{o}{\PYGZam{}}\PYG{n}{status}\PYG{p}{,}\PYG{n}{WNOHANG}\PYG{o}{|}\PYG{n}{WUNTRACED}\PYG{p}{))}\PYG{o}{\PYGZgt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{//returns pid of child if OK,0 or \PYGZhy{}1 on error }
+        \PYG{n}{job} \PYG{o}{=} \PYG{n}{getjobpid}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,}\PYG{n}{pid}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{WIFEXITED}\PYG{p}{(}\PYG{n}{status}\PYG{p}{))} \PYG{p}{\PYGZob{}}       
+            \PYG{n}{deletejob}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,}\PYG{n}{pid}\PYG{p}{);} \PYG{c+c1}{// delete the job if the job exited normally with exit()}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{WIFSIGNALED}\PYG{p}{(}\PYG{n}{status}\PYG{p}{))} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// returns nonzero if the child terminated because it received a signal which was not handled}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Job [\PYGZpc{}d] (\PYGZpc{}d) terminated by signal 2}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{jid}\PYG{p}{,}\PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid}\PYG{p}{);}
+            \PYG{n}{deletejob}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{,}\PYG{n}{pid}\PYG{p}{);} \PYG{c+c1}{//delete job terminated by SIGINT}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{WIFSTOPPED}\PYG{p}{(}\PYG{n}{status}\PYG{p}{))} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// the child is stopped}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Job [\PYGZpc{}d] (\PYGZpc{}d) stopped by signal 20}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{jid}\PYG{p}{,} \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid}\PYG{p}{);}
+            \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{state} \PYG{o}{=} \PYG{n}{ST}\PYG{p}{;} \PYG{c+c1}{// change the state to STOP}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * sigint\PYGZus{}handler \PYGZhy{} The kernel sends a SIGINT to the shell whenver the}
+\PYG{c+cm}{ *    user types ctrl\PYGZhy{}c at the keyboard.  Catch it and send it along}
+\PYG{c+cm}{ *    to the foreground job.  }
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{sigint\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid} \PYG{o}{=} \PYG{n}{fgpid}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{);} \PYG{c+c1}{// get the pid of the fg job}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{kill}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{pid}\PYG{p}{,} \PYG{n}{SIGINT}\PYG{p}{)} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{//send SIGINT to the fg job group}
+	    \PYG{c+c1}{//printf(\PYGZdq{}kill(SIGINT failed\PYGZdq{});}
+	\PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * sigtstp\PYGZus{}handler \PYGZhy{} The kernel sends a SIGTSTP to the shell whenever}
+\PYG{c+cm}{ *     the user types ctrl\PYGZhy{}z at the keyboard. Catch it and suspend the}
+\PYG{c+cm}{ *     foreground job by sending it a SIGTSTP.  }
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{sigtstp\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid} \PYG{o}{=} \PYG{n}{fgpid}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{);} \PYG{c+c1}{// get the pid of fg job}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{kill}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{pid}\PYG{p}{,} \PYG{n}{SIGTSTP}\PYG{p}{);} \PYG{c+c1}{//send SIGSTP signal to the fg job group      }
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*********************}
+\PYG{c+cm}{ * End signal handlers}
+\PYG{c+cm}{ *********************/}
+\PYG{c+cm}{/***********************************************}
+\PYG{c+cm}{ * Helper routines that manipulate the job list}
+\PYG{c+cm}{ **********************************************/}
+
+\PYG{c+cm}{/* clearjob \PYGZhy{} Clear the entries in a job struct */}
+\PYG{k+kt}{void} \PYG{n+nf}{clearjob}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{job}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{jid} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{state} \PYG{o}{=} \PYG{n}{UNDEF}\PYG{p}{;}
+    \PYG{n}{job}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{cmdline}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* initjobs \PYGZhy{} Initialize the job list */}
+\PYG{k+kt}{void} \PYG{n+nf}{initjobs}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{n}{clearjob}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* maxjid \PYGZhy{} Returns largest allocated job ID */}
+\PYG{k+kt}{int} \PYG{n+nf}{maxjid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{,} \PYG{n}{max}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}
+
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid} \PYG{o}{\PYGZgt{}} \PYG{n}{max}\PYG{p}{)}
+            \PYG{n}{max} \PYG{o}{=} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid}\PYG{p}{;}
+    \PYG{k}{return} \PYG{n}{max}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* addjob \PYGZhy{} Add a job to the job list */}
+\PYG{k+kt}{int} \PYG{n+nf}{addjob}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{,} \PYG{k+kt}{int} \PYG{n}{state}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{cmdline}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+    
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{1}\PYG{p}{)}
+        \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid} \PYG{o}{=} \PYG{n}{pid}\PYG{p}{;}
+            \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{state} \PYG{o}{=} \PYG{n}{state}\PYG{p}{;}
+            \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid} \PYG{o}{=} \PYG{n}{nextjid}\PYG{o}{++}\PYG{p}{;}
+            \PYG{k}{if} \PYG{p}{(}\PYG{n}{nextjid} \PYG{o}{\PYGZgt{}} \PYG{n}{MAXJOBS}\PYG{p}{)}
+                \PYG{n}{nextjid} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{n}{strcpy}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{cmdline}\PYG{p}{,} \PYG{n}{cmdline}\PYG{p}{);}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{verbose}\PYG{p}{)\PYGZob{}}
+                \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Added job [\PYGZpc{}d] \PYGZpc{}d \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{cmdline}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{k}{return} \PYG{l+m+mi}{1}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Tried to create too many jobs}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* deletejob \PYGZhy{} Delete a job whose PID=pid from the job list */}
+\PYG{k+kt}{int} \PYG{n+nf}{deletejob}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{1}\PYG{p}{)}
+        \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid} \PYG{o}{==} \PYG{n}{pid}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{clearjob}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]);}
+            \PYG{n}{nextjid} \PYG{o}{=} \PYG{n}{maxjid}\PYG{p}{(}\PYG{n}{jobs}\PYG{p}{)}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{k}{return} \PYG{l+m+mi}{1}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* fgpid \PYGZhy{} Return PID of current foreground job, 0 if no such job */}
+\PYG{k+kt}{pid\PYGZus{}t} \PYG{n+nf}{fgpid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{state} \PYG{o}{==} \PYG{n}{FG}\PYG{p}{)}
+            \PYG{k}{return} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid}\PYG{p}{;}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* getjobpid  \PYGZhy{} Find a job (by PID) on the job list */}
+\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n+nf}{getjobpid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{1}\PYG{p}{)}
+        \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid} \PYG{o}{==} \PYG{n}{pid}\PYG{p}{)}
+            \PYG{k}{return} \PYG{o}{\PYGZam{}}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{];}
+    \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* getjobjid  \PYGZhy{} Find a job (by JID) on the job list */}
+\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n+nf}{getjobjid}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{,} \PYG{k+kt}{int} \PYG{n}{jid}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{jid} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{1}\PYG{p}{)}
+        \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid} \PYG{o}{==} \PYG{n}{jid}\PYG{p}{)}
+            \PYG{k}{return} \PYG{o}{\PYGZam{}}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{];}
+    \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* pid2jid \PYGZhy{} Map process ID to job ID */}
+\PYG{k+kt}{int} \PYG{n+nf}{pid2jid}\PYG{p}{(}\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{pid} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{1}\PYG{p}{)}
+        \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid} \PYG{o}{==} \PYG{n}{pid}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k}{return} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* listjobs \PYGZhy{} Print the job list */}
+\PYG{k+kt}{void} \PYG{n+nf}{listjobs}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{job\PYGZus{}t} \PYG{o}{*}\PYG{n}{jobs}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{;}
+    
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i} \PYG{o}{\PYGZlt{}} \PYG{n}{MAXJOBS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{if} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid} \PYG{o}{!=} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}[\PYGZpc{}d] (\PYGZpc{}d) \PYGZdq{}}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{jid}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{pid}\PYG{p}{);}
+            \PYG{k}{switch} \PYG{p}{(}\PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{state}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{k}{case} \PYG{n+nl}{BG}\PYG{p}{:} 
+                    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Running \PYGZdq{}}\PYG{p}{);}
+                    \PYG{k}{break}\PYG{p}{;}
+                \PYG{k}{case} \PYG{n+nl}{FG}\PYG{p}{:} 
+                    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Foreground \PYGZdq{}}\PYG{p}{);}
+                    \PYG{k}{break}\PYG{p}{;}
+                \PYG{k}{case} \PYG{n+nl}{ST}\PYG{p}{:} 
+                    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Stopped \PYGZdq{}}\PYG{p}{);}
+                    \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{default}\PYG{o}{:}
+                    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}listjobs: Internal error: job[\PYGZpc{}d].state=\PYGZpc{}d \PYGZdq{}}\PYG{p}{,} 
+                           \PYG{n}{i}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{state}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s\PYGZdq{}}\PYG{p}{,} \PYG{n}{jobs}\PYG{p}{[}\PYG{n}{i}\PYG{p}{].}\PYG{n}{cmdline}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cm}{/******************************}
+\PYG{c+cm}{ * end job list helper routines}
+\PYG{c+cm}{ ******************************/}
+
+
+\PYG{c+cm}{/***********************}
+\PYG{c+cm}{ * Other helper routines}
+\PYG{c+cm}{ ***********************/}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * usage \PYGZhy{} print a help message}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{usage}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Usage: shell [\PYGZhy{}hvp]}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}   \PYGZhy{}h   print this message}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}   \PYGZhy{}v   print additional diagnostic information}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}   \PYGZhy{}p   do not emit a command prompt}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * unix\PYGZus{}error \PYGZhy{} unix\PYGZhy{}style error routine}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{unix\PYGZus{}error}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{msg}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stdout}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{msg}\PYG{p}{,} \PYG{n}{strerror}\PYG{p}{(}\PYG{n}{errno}\PYG{p}{));}
+    \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * app\PYGZus{}error \PYGZhy{} application\PYGZhy{}style error routine}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{app\PYGZus{}error}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{msg}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stdout}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{msg}\PYG{p}{);}
+    \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * Signal \PYGZhy{} wrapper for the sigaction function}
+\PYG{c+cm}{ */}
+\PYG{n}{handler\PYGZus{}t} \PYG{o}{*}\PYG{n+nf}{Signal}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{signum}\PYG{p}{,} \PYG{n}{handler\PYGZus{}t} \PYG{o}{*}\PYG{n}{handler}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{sigaction} \PYG{n}{action}\PYG{p}{,} \PYG{n}{old\PYGZus{}action}\PYG{p}{;}
+
+    \PYG{n}{action}\PYG{p}{.}\PYG{n}{sa\PYGZus{}handler} \PYG{o}{=} \PYG{n}{handler}\PYG{p}{;}  
+    \PYG{n}{sigemptyset}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{action}\PYG{p}{.}\PYG{n}{sa\PYGZus{}mask}\PYG{p}{);} \PYG{c+cm}{/* block sigs of type being handled */}
+    \PYG{n}{action}\PYG{p}{.}\PYG{n}{sa\PYGZus{}flags} \PYG{o}{=} \PYG{n}{SA\PYGZus{}RESTART}\PYG{p}{;} \PYG{c+cm}{/* restart syscalls if possible */}
+
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{sigaction}\PYG{p}{(}\PYG{n}{signum}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{action}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{old\PYGZus{}action}\PYG{p}{)} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)}
+        \PYG{n}{unix\PYGZus{}error}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Signal error\PYGZdq{}}\PYG{p}{);}
+    \PYG{k}{return} \PYG{p}{(}\PYG{n}{old\PYGZus{}action}\PYG{p}{.}\PYG{n}{sa\PYGZus{}handler}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * sigquit\PYGZus{}handler \PYGZhy{} The driver program can gracefully terminate the}
+\PYG{c+cm}{ *    child shell by sending it a SIGQUIT signal.}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{sigquit\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig}\PYG{p}{)} 
+\PYG{p}{\PYGZob{}}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Terminating after receipt of SIGQUIT signal}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

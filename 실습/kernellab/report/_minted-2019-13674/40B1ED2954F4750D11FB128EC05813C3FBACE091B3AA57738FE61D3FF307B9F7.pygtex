@@ -1,0 +1,89 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/debugfs.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/kernel.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/module.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/uaccess.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}asm/pgtable.h\PYGZgt{}}
+
+\PYG{n}{MODULE\PYGZus{}LICENSE}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}GPL\PYGZdq{}}\PYG{p}{);}
+
+\PYG{k}{static} \PYG{k}{struct} \PYG{n}{dentry} \PYG{o}{*}\PYG{n}{dir}\PYG{p}{,} \PYG{o}{*}\PYG{n}{output}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{struct} \PYG{n}{task\PYGZus{}struct} \PYG{o}{*}\PYG{n}{task}\PYG{p}{;}
+
+\PYG{k}{struct} \PYG{n}{packet} \PYG{p}{\PYGZob{}}
+	\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{pid}\PYG{p}{;}
+	\PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{vaddr}\PYG{p}{;}
+	\PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{paddr}\PYG{p}{;}
+\PYG{p}{\PYGZcb{};}
+
+
+\PYG{k}{static} \PYG{k+kt}{ssize\PYGZus{}t} \PYG{n+nf}{read\PYGZus{}output}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{file} \PYG{o}{*}\PYG{n}{fp}\PYG{p}{,}
+						   \PYG{k+kt}{char} \PYG{n}{\PYGZus{}\PYGZus{}user} \PYG{o}{*}\PYG{n}{user\PYGZus{}buffer}\PYG{p}{,}
+						   \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{length}\PYG{p}{,}
+						   \PYG{n}{loff\PYGZus{}t} \PYG{o}{*}\PYG{n}{position}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+	\PYG{k}{struct} \PYG{n}{packet} \PYG{n}{thePacket}\PYG{p}{;}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{copy\PYGZus{}from\PYGZus{}user}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{thePacket}\PYG{p}{,}   \PYG{n}{user\PYGZus{}buffer}\PYG{p}{,} \PYG{n}{length}\PYG{p}{))}
+		\PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+\PYG{c+c1}{//	printk(\PYGZdq{}\PYGZpc{}d \PYGZpc{}lx \PYGZpc{}lx\PYGZbs{}n\PYGZdq{}, (int)thePacket.pid,  thePacket.vaddr, thePacket.paddr);}
+	\PYG{k}{struct} \PYG{n}{pid} \PYG{o}{*} \PYG{n}{pid\PYGZus{}struct} \PYG{o}{=} \PYG{n}{find\PYGZus{}get\PYGZus{}pid}\PYG{p}{(}\PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{pid}\PYG{p}{);}
+	\PYG{n}{task}  \PYG{o}{=} \PYG{n}{pid\PYGZus{}task}\PYG{p}{(}\PYG{n}{pid\PYGZus{}struct}\PYG{p}{,} \PYG{n}{PIDTYPE\PYGZus{}PID}\PYG{p}{);} \PYG{c+c1}{// Find task\PYGZus{}struct using input\PYGZus{}pid. Hint: pid\PYGZus{}task}
+	\PYG{k}{struct} \PYG{n}{mm\PYGZus{}struct} \PYG{o}{*} \PYG{n}{mm} \PYG{o}{=} \PYG{n}{task} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{mm}\PYG{p}{;}
+	\PYG{n}{pgd\PYGZus{}t} \PYG{o}{*} \PYG{n}{firstPgd} \PYG{o}{=} \PYG{n}{mm}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pgd}\PYG{p}{;}
+\PYG{c+c1}{//	printk(\PYGZdq{}pgd\PYGZus{}t*: \PYGZpc{}p \PYGZpc{}lx\PYGZbs{}n\PYGZdq{}, firstPgd, *firstPgd);}
+	\PYG{n}{pgd\PYGZus{}t} \PYG{o}{*} \PYG{n}{thePgd} \PYG{o}{=} \PYG{n}{pgd\PYGZus{}offset}\PYG{p}{(}\PYG{n}{mm}\PYG{p}{,} \PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{vaddr}\PYG{p}{);}
+	\PYG{n}{p4d\PYGZus{}t} \PYG{o}{*} \PYG{n}{theP4d} \PYG{o}{=} \PYG{n}{p4d\PYGZus{}offset}\PYG{p}{(}\PYG{n}{thePgd}\PYG{p}{,} \PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{vaddr}\PYG{p}{);}
+	\PYG{n}{pud\PYGZus{}t} \PYG{o}{*} \PYG{n}{thePud} \PYG{o}{=} \PYG{n}{pud\PYGZus{}offset}\PYG{p}{(}\PYG{n}{theP4d}\PYG{p}{,} \PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{vaddr}\PYG{p}{);}
+	\PYG{n}{pmd\PYGZus{}t} \PYG{o}{*} \PYG{n}{thePmd} \PYG{o}{=} \PYG{n}{pmd\PYGZus{}offset}\PYG{p}{(}\PYG{n}{thePud}\PYG{p}{,} \PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{vaddr}\PYG{p}{);}
+	\PYG{n}{pte\PYGZus{}t} \PYG{o}{*} \PYG{n}{thePte} \PYG{o}{=} \PYG{n}{pte\PYGZus{}offset\PYGZus{}kernel}\PYG{p}{(}\PYG{n}{thePmd}\PYG{p}{,} \PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{vaddr}\PYG{p}{);}
+	\PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{offset} \PYG{o}{=} \PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{vaddr} \PYG{o}{\PYGZam{}} \PYG{o}{\PYGZti{}}\PYG{n}{PAGE\PYGZus{}MASK}\PYG{p}{;}
+	\PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{physicalAddress} \PYG{o}{=} \PYG{p}{(}\PYG{n}{pte\PYGZus{}val}\PYG{p}{(}\PYG{o}{*}\PYG{n}{thePte}\PYG{p}{)} \PYG{o}{\PYGZam{}} \PYG{n}{PAGE\PYGZus{}MASK}\PYG{p}{)} \PYG{o}{|} \PYG{n}{offset}\PYG{p}{;}
+	\PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{fourtyEightBitMask} \PYG{o}{=} \PYG{p}{((}\PYG{l+m+mi}{1UL} \PYG{o}{\PYGZlt{}\PYGZlt{}} \PYG{l+m+mi}{49}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{);}
+\PYG{c+c1}{//	printk(\PYGZdq{}\PYGZpc{}lx\PYGZbs{}n\PYGZdq{}, fourtyEightBitMask);}
+	\PYG{n}{physicalAddress} \PYG{o}{\PYGZam{}=} \PYG{n}{fourtyEightBitMask}\PYG{p}{;}
+	\PYG{n}{thePacket}\PYG{p}{.}\PYG{n}{paddr} \PYG{o}{=} \PYG{n}{physicalAddress}\PYG{p}{;}
+\PYG{c+c1}{//	printk(\PYGZdq{}physical: \PYGZpc{}lx\PYGZbs{}n\PYGZdq{}, physicalAddress);}
+	\PYG{n}{copy\PYGZus{}to\PYGZus{}user}\PYG{p}{(}\PYG{n}{user\PYGZus{}buffer}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{thePacket}\PYG{p}{,} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{thePacket}\PYG{p}{));}
+	\PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+	
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{static} \PYG{k}{const} \PYG{k}{struct} \PYG{n}{file\PYGZus{}operations} \PYG{n}{dbfs\PYGZus{}fops} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+	\PYG{p}{.}\PYG{n}{read} \PYG{o}{=} \PYG{n}{read\PYGZus{}output}\PYG{p}{,}\PYG{c+c1}{// Mapping file operations with your functions}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{static} \PYG{k+kt}{int} \PYG{n}{\PYGZus{}\PYGZus{}init} \PYG{n+nf}{dbfs\PYGZus{}module\PYGZus{}init}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+	\PYG{c+c1}{// Implement init module}
+
+
+	\PYG{n}{dir} \PYG{o}{=} \PYG{n}{debugfs\PYGZus{}create\PYGZus{}dir}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}paddr\PYGZdq{}}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+
+	\PYG{k}{if} \PYG{p}{(}\PYG{o}{!}\PYG{n}{dir}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Cannot create paddr dir}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+		\PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+
+	\PYG{c+c1}{// Fill in the arguments below}
+	\PYG{n}{output} \PYG{o}{=} \PYG{n}{debugfs\PYGZus{}create\PYGZus{}file}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}output\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mo}{0777} \PYG{p}{,} \PYG{n}{dir} \PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{dbfs\PYGZus{}fops} \PYG{p}{);}
+	
+	\PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{output}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Cannot create output file}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+		\PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+
+	\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}dbfs\PYGZus{}paddr module initialize done}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+
+	\PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{n}{\PYGZus{}\PYGZus{}exit} \PYG{n+nf}{dbfs\PYGZus{}module\PYGZus{}exit}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+	\PYG{c+c1}{// Implement exit module}
+	\PYG{n}{debugfs\PYGZus{}remove\PYGZus{}recursive}\PYG{p}{(}\PYG{n}{dir}\PYG{p}{);}
+	\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}dbfs\PYGZus{}paddr module exit}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{n}{module\PYGZus{}init}\PYG{p}{(}\PYG{n}{dbfs\PYGZus{}module\PYGZus{}init}\PYG{p}{);}
+\PYG{n}{module\PYGZus{}exit}\PYG{p}{(}\PYG{n}{dbfs\PYGZus{}module\PYGZus{}exit}\PYG{p}{);}
+\end{Verbatim}

@@ -1,0 +1,21 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part3\PYGZdl{} make run test1}
+\PYG{g+go}{  cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{  [0001] Memory tracer started.}
+\PYG{g+go}{  [0002]         main:6  : malloc( 1024 ) = 0x1286060}
+\PYG{g+go}{  [0003]         main:10 : malloc( 32 ) = 0x12864c0}
+\PYG{g+go}{  [0004]         main:1d : malloc( 1 ) = 0x1286540}
+\PYG{g+go}{  [0005]         main:25 : free( 0x1286540 )}
+\PYG{g+go}{  [0006]         main:2d : free( 0x12864c0 )}
+\PYG{g+go}{  [0007]}
+\PYG{g+go}{  [0008] Statistics}
+\PYG{g+go}{  [0009]   allocated\PYGZus{}total      1057}
+\PYG{g+go}{  [0010]   allocated\PYGZus{}avg        352}
+\PYG{g+go}{  [0011]   freed\PYGZus{}total          33}
+\PYG{g+go}{  [0012]}
+\PYG{g+go}{  [0013] Non\PYGZhy{}deallocated memory blocks}
+\PYG{g+go}{  [0014]   block              size       ref cnt   caller}
+\PYG{g+go}{  [0015]   0x1286060          1024       1         main:6}
+\PYG{g+go}{  [0016]}
+\PYG{g+go}{  [0017] Memory tracer stopped.}
+\end{Verbatim}

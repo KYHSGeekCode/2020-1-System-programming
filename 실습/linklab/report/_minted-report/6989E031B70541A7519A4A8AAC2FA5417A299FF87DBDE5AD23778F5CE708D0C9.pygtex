@@ -1,0 +1,3 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+  \PYG{n+nf}{hlt}			\PYG{err}{/}\PYG{p}{*} \PYG{n+no}{Crash} \PYG{n+no}{if} \PYG{n+no}{somehow} \PYG{err}{`}\PYG{n+no}{exit}\PYG{err}{\PYGZsq{}} \PYG{n+no}{does} \PYG{n+no}{return.}  \PYG{p}{*}\PYG{err}{/}
+\end{Verbatim}

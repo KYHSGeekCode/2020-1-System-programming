@@ -1,0 +1,13 @@
+\BOOKMARK [1][-]{section.0.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.0.2}{Part 1: Implementing a sequential web proxy}{}% 2
+\BOOKMARK [2][-]{subsection.0.2.1}{.. ..}{section.0.2}% 3
+\BOOKMARK [2][-]{subsection.0.2.2}{.. ..}{section.0.2}% 4
+\BOOKMARK [2][-]{subsection.0.2.3}{.. ..}{section.0.2}% 5
+\BOOKMARK [2][-]{subsection.0.2.4}{.. ...}{section.0.2}% 6
+\BOOKMARK [1][-]{section.0.3}{Part 2: Dealing with multiple concurrent requests}{}% 7
+\BOOKMARK [1][-]{section.0.4}{Part 3: Caching web objects}{}% 8
+\BOOKMARK [2][-]{subsection.0.4.1}{LRU Cache}{section.0.4}% 9
+\BOOKMARK [2][-]{subsection.0.4.2}{.. .. - ... .... .... Ctrl+C. ... . .... .. \046 SIGPIPE ..}{section.0.4}% 10
+\BOOKMARK [1][-]{section.0.5}{Conclusion}{}% 11
+\BOOKMARK [2][-]{subsection.0.5.1}{.... .}{section.0.5}% 12
+\BOOKMARK [2][-]{subsection.0.5.2}{.... .}{section.0.5}% 13

@@ -1,0 +1,289 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * mm\PYGZhy{}naive.c \PYGZhy{} The fast, memory\PYGZhy{}efficient malloc package.}
+\PYG{c+cm}{ * }
+\PYG{c+cm}{ * In this approach, a block is allocated by searching for a block which is free or}
+\PYG{c+cm}{ * incrementing the brk pointer.  A block has a size\PYGZus{}t sized header. Blocks are coalesced or reused.}
+\PYG{c+cm}{ * Realloc is implemented effecive by coalescing or directly using mm\PYGZus{}malloc and mm\PYGZus{}free.}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ */}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdio.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdlib.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}assert.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}unistd.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}string.h\PYGZgt{}}
+
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}mm.h\PYGZdq{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}memlib.h\PYGZdq{}}
+
+\PYG{n}{team\PYGZus{}t} \PYG{n}{team} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+	\PYG{l+s}{\PYGZdq{}user102\PYGZdq{}}\PYG{p}{,}
+	\PYG{l+s}{\PYGZdq{}¾çÇö¼­\PYGZdq{}}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{c+cm}{/* single word (4) or double word (8) alignment */}
+\PYG{c+cp}{\PYGZsh{}define ALIGNMENT 8}
+
+\PYG{c+cm}{/* rounds up to the nearest multiple of ALIGNMENT */}
+\PYG{c+cp}{\PYGZsh{}define ALIGN(size) (((size) + (ALIGNMENT\PYGZhy{}1)) \PYGZam{} \PYGZti{}0x7)}
+
+
+\PYG{c+cp}{\PYGZsh{}define SIZE\PYGZus{}T\PYGZus{}SIZE (ALIGN(sizeof(size\PYGZus{}t)))}
+
+\PYG{c+cp}{\PYGZsh{}define MAKE\PYGZus{}SIZE(size) (ALIGN(SIZE\PYGZus{}T\PYGZus{}SIZE*2+size))}
+
+\PYG{c+cp}{\PYGZsh{}define GET(p) (*(unsigned int *)(p))}
+\PYG{c+cp}{\PYGZsh{}define SET(p, value) (*(unsigned int*)(p) = value)}
+\PYG{c+cp}{\PYGZsh{}define HDRP(p) (p\PYGZhy{}SIZE\PYGZus{}T\PYGZus{}SIZE)}
+\PYG{c+cp}{\PYGZsh{}define GET\PYGZus{}ALLOC(hdr) (GET(hdr) \PYGZam{} 0x7)}
+\PYG{c+cp}{\PYGZsh{}define SET\PYGZus{}ALLOC(hdr) (*(unsigned int *)hdr |= 0x1)}
+
+\PYG{c+cp}{\PYGZsh{}define GET\PYGZus{}SIZE(hdr) (GET(hdr) \PYGZam{} \PYGZti{}0x7)}
+\PYG{c+cp}{\PYGZsh{}define FTRP(hdr) (hdr+GET\PYGZus{}SIZE(hdr)\PYGZhy{}SIZE\PYGZus{}T\PYGZus{}SIZE)}
+\PYG{c+cp}{\PYGZsh{}define NEXT\PYGZus{}HDR(hdr) (hdr+GET\PYGZus{}SIZE(hdr))}
+\PYG{c+cp}{\PYGZsh{}define PREV\PYGZus{}HDR(hdr) (hdr\PYGZhy{}GET\PYGZus{}SIZE(hdr\PYGZhy{}SIZE\PYGZus{}T\PYGZus{}SIZE))}
+\PYG{c+cp}{\PYGZsh{}define HDR2PTR(hdr) (hdr+SIZE\PYGZus{}T\PYGZus{}SIZE)}
+\PYG{c+cp}{\PYGZsh{}define HDR2FTR(hdr) (hdr+ GET\PYGZus{}SIZE\PYGZus{}FROM\PYGZus{}HDR(hdr) \PYGZhy{} SIZE\PYGZus{}T\PYGZus{}SIZE)}
+\PYG{c+cp}{\PYGZsh{}define SET\PYGZus{}SIZE(hdr, size) SET(hdr, (size) \PYGZam{} \PYGZti{}0x7)}
+\PYG{c+cp}{\PYGZsh{}define SET\PYGZus{}FREE(hdr) (*(unsigned int *) hdr \PYGZam{}= \PYGZti{}0x7)}
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{n+nf}{writeFooter}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{header}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{ftrp} \PYG{o}{=} \PYG{n}{FTRP}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+	\PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{ftrp}\PYG{p}{,} \PYG{n}{header}\PYG{p}{,} \PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * mm\PYGZus{}init \PYGZhy{} initialize the malloc package.}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{int} \PYG{n+nf}{mm\PYGZus{}init}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * mm\PYGZus{}malloc \PYGZhy{} Allocate a block by searching the first fit from the nodes list, Then split the left block to allocatables. If not found, increase the brk pointer.}
+\PYG{c+cm}{ *     Always allocate a block whose size is a multiple of the alignment.}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{search\PYGZus{}start} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{k+kt}{void} \PYG{o}{*}\PYG{n+nf}{mm\PYGZus{}malloc}\PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{newSize} \PYG{o}{=} \PYG{n}{MAKE\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{search\PYGZus{}start} \PYG{o}{\PYGZlt{}=} \PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{)}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//    	printf(\PYGZdq{}Initializing search\PYGZus{}start\PYGZbs{}n\PYGZdq{});}
+    	\PYG{n}{search\PYGZus{}start} \PYG{o}{=} \PYG{n}{mem\PYGZus{}sbrk}\PYG{p}{(}\PYG{n}{newSize}\PYG{p}{);}
+    	\PYG{k}{if} \PYG{p}{(}\PYG{n}{search\PYGZus{}start} \PYG{o}{==} \PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{)}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+			\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+		\PYG{n}{SET}\PYG{p}{(}\PYG{n}{search\PYGZus{}start}\PYG{p}{,} \PYG{n}{newSize}\PYG{p}{);}
+		\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{search\PYGZus{}start}\PYG{p}{);}
+		\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{search\PYGZus{}start}\PYG{p}{);}
+\PYG{c+c1}{//		printf(\PYGZdq{}Initialized search\PYGZus{}start: \PYGZpc{}p with size \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, search\PYGZus{}start, size);}
+		\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{search\PYGZus{}start}\PYG{p}{);}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{search\PYGZus{}start}\PYG{p}{;}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{max\PYGZus{}heap} \PYG{o}{=} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{();}
+	\PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{\PYGZlt{}=} \PYG{n}{max\PYGZus{}heap}\PYG{o}{\PYGZhy{}}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{o}{*}\PYG{l+m+mi}{2} \PYG{o}{\PYGZhy{}} \PYG{n}{newSize}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{GET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+			\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{freeSize} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+			\PYG{k+kt}{int} \PYG{n}{leftSize} \PYG{o}{=} \PYG{n}{freeSize} \PYG{o}{\PYGZhy{}} \PYG{n}{newSize}\PYG{p}{;}
+			\PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//				printf(\PYGZdq{}Found free space from \PYGZpc{}p to \PYGZpc{}p size \PYGZpc{}d, and \PYGZpc{}d needed\PYGZbs{}n\PYGZdq{}, iterator, iterator+freeSize, freeSize,  newSize);}
+				\PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{2} \PYG{o}{*} \PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// allocate leftover as free}
+\PYG{c+c1}{//					printf(\PYGZdq{}Allocated leftover: \PYGZpc{}d \PYGZbs{}n\PYGZdq{}, newSize);}
+					\PYG{n}{SET}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{,} \PYG{n}{newSize}\PYG{p}{);}
+					\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+					\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+					\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{nextHdr} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+					\PYG{n}{SET}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{,} \PYG{n}{leftSize}\PYG{p}{);}
+					\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{);}	
+				\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//					printf(\PYGZdq{}Allocated the full space\PYGZbs{}n\PYGZdq{});}
+					\PYG{n}{SET}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{,} \PYG{n}{freeSize}\PYG{p}{);}
+					\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+					\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+				\PYG{p}{\PYGZcb{}}
+				\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+			\PYG{p}{\PYGZcb{}}
+		\PYG{p}{\PYGZcb{}}
+		\PYG{n}{iterator} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{n}{iterator} \PYG{o}{=} \PYG{n}{mem\PYGZus{}sbrk}\PYG{p}{(}\PYG{n}{newSize}\PYG{p}{);}
+\PYG{c+c1}{//	printf(\PYGZdq{}Could not find free space. Created: \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, iterator);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{iterator} \PYG{o}{==} \PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{)}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+		\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{n}{SET}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{,} \PYG{n}{newSize}\PYG{p}{);}
+	\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+	\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+	\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{n+nf}{coalesce\PYGZus{}right}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{header}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//	printf(\PYGZdq{}Coalesce right \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, header);}
+	\PYG{k+kt}{int} \PYG{n}{alloc} \PYG{o}{=} \PYG{n}{GET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{max\PYGZus{}heap} \PYG{o}{=} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{();}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+	\PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{o}{\PYGZlt{}=}\PYG{n}{max\PYGZus{}heap}\PYG{o}{\PYGZhy{}}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{o}{*}\PYG{l+m+mi}{2} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{o}{!}\PYG{n}{GET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+		\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+		\PYG{n}{SET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{header}\PYG{p}{,} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{header}\PYG{p}{)} \PYG{o}{+} \PYG{n}{size}\PYG{p}{);}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{alloc}\PYG{p}{)}
+			\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+		\PYG{n}{iterator} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+\PYG{c+c1}{//		printf(\PYGZdq{}right Iterator: \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, iterator);}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+\PYG{c+c1}{//	printf(\PYGZdq{}Coerce right finished\PYGZbs{}n\PYGZdq{});}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{char} \PYG{o}{*} \PYG{n+nf}{coalesce\PYGZus{}left}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{header}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//	printf(\PYGZdq{}Colaesce left\PYGZbs{}n\PYGZdq{});}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{GET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{header}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+		\PYG{k}{return} \PYG{n}{header}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{min\PYGZus{}heap} \PYG{o}{=} \PYG{n}{mem\PYGZus{}heap\PYGZus{}lo}\PYG{p}{();}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{PREV\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+\PYG{c+c1}{//	printf(\PYGZdq{}header: \PYGZpc{}p, iter \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, header, iterator);}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{header} \PYG{o}{==} \PYG{n}{iterator}\PYG{p}{)}
+		\PYG{k}{return} \PYG{n}{header}\PYG{p}{;}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{last\PYGZus{}valid\PYGZus{}iter} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{\PYGZgt{}=} \PYG{n}{min\PYGZus{}heap} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{o}{!}\PYG{n}{GET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+		\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+\PYG{c+c1}{//		printf(\PYGZdq{}Coalesce left iterator \PYGZpc{}p, Size = \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, iterator, size);}
+		\PYG{n}{SET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{,} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{header}\PYG{p}{)} \PYG{o}{+} \PYG{n}{size}\PYG{p}{);}
+		\PYG{n}{last\PYGZus{}valid\PYGZus{}iter} \PYG{o}{=} \PYG{n}{iterator}\PYG{p}{;}
+\PYG{c+c1}{//		writeFooter(iterator);}
+		\PYG{n}{iterator} \PYG{o}{=} \PYG{n}{PREV\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{last\PYGZus{}valid\PYGZus{}iter} \PYG{o}{==} \PYG{n}{iterator}\PYG{p}{)}
+			\PYG{k}{break}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{last\PYGZus{}valid\PYGZus{}iter}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{last\PYGZus{}valid\PYGZus{}iter}\PYG{p}{);}
+	\PYG{p}{\PYGZcb{}}
+\PYG{c+c1}{//	printf(\PYGZdq{}Colaesce left finished\PYGZdq{});}
+\PYG{c+c1}{//	mm\PYGZus{}check();}
+	\PYG{k}{return} \PYG{n}{last\PYGZus{}valid\PYGZus{}iter}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * mm\PYGZus{}free \PYGZhy{} Freeing a block marks the block as free, and tries coalescing}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{mm\PYGZus{}free}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//	printf(\PYGZdq{}Free \PYGZpc{}p called \PYGZbs{}n\PYGZdq{}, ptr );}
+	\PYG{n}{SET\PYGZus{}FREE}\PYG{p}{(}\PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{));}
+	\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{));}
+	\PYG{n}{coalesce\PYGZus{}right}\PYG{p}{(}\PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{));}
+	\PYG{n}{coalesce\PYGZus{}left}\PYG{p}{(}\PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{));}
+\PYG{c+c1}{//	printf(\PYGZdq{}Free finished\PYGZbs{}n\PYGZdq{});}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * mm\PYGZus{}realloc \PYGZhy{} Implemented effectively using coalescing or  in terms of mm\PYGZus{}malloc and mm\PYGZus{}free}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{o}{*}\PYG{n+nf}{mm\PYGZus{}realloc}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//	printf(\PYGZdq{}Realloc \PYGZpc{}p size \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, ptr, size);}
+    \PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{oldptr} \PYG{o}{=} \PYG{n}{ptr}\PYG{p}{;}
+    \PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{newptr}\PYG{p}{;}
+    \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{copySize}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{hdr} \PYG{o}{=} \PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{);}
+    \PYG{k+kt}{int} \PYG{n}{leftSize}\PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    
+    \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{realSize}\PYG{o}{=}  \PYG{n}{MAKE\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+    
+	\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{curSize} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+	\PYG{n}{leftSize} \PYG{o}{=} \PYG{n}{curSize} \PYG{o}{\PYGZhy{}} \PYG{n}{realSize}\PYG{p}{;}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//		printf(\PYGZdq{}First try tried \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, ptr);}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// use left space}
+\PYG{c+c1}{//			printf(\PYGZdq{}First try success \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, ptr);}
+			\PYG{n}{SET}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{,} \PYG{n}{realSize}\PYG{p}{);}
+			\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+			\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+			\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{nextHdr} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+			\PYG{n}{SET}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{,} \PYG{n}{leftSize}\PYG{p}{);}
+			\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{);}
+			\PYG{k}{return} \PYG{n}{ptr}\PYG{p}{;}	
+		\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//			printf(\PYGZdq{}First try no leftover \PYGZpc{}p\PYGZbs{}n\PYGZdq{}, ptr);}
+			\PYG{k}{return} \PYG{n}{ptr}\PYG{p}{;} \PYG{c+c1}{// Nothing to do}
+		\PYG{p}{\PYGZcb{}}
+	\PYG{p}{\PYGZcb{}}
+	
+	\PYG{n}{coalesce\PYGZus{}right}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+	
+    \PYG{n}{curSize} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+    \PYG{n}{leftSize}\PYG{o}{=} \PYG{n}{curSize} \PYG{o}{\PYGZhy{}} \PYG{n}{realSize}\PYG{p}{;}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mi}{0}\PYG{p}{)\PYGZob{}}
+	    \PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+	    	\PYG{n}{SET}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{,} \PYG{n}{realSize}\PYG{p}{);}
+			\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+			\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+			\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{nextHdr} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+			\PYG{n}{SET}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{,} \PYG{n}{leftSize}\PYG{p}{);}
+			\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{);}
+			\PYG{k}{return} \PYG{n}{ptr}\PYG{p}{;}
+		\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+			\PYG{k}{return} \PYG{n}{ptr}\PYG{p}{;}
+		\PYG{p}{\PYGZcb{}}
+	\PYG{p}{\PYGZcb{}}
+	
+	\PYG{n}{copySize} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{;}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{copySize} \PYG{o}{\PYGZgt{}} \PYG{n}{size}\PYG{p}{)}
+		\PYG{n}{copySize} \PYG{o}{=} \PYG{n}{size}\PYG{p}{;}
+		
+	\PYG{n}{newptr} \PYG{o}{=} \PYG{n}{coalesce\PYGZus{}left}\PYG{p}{(}\PYG{n}{hdr}\PYG{p}{);}
+
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{newptr} \PYG{o}{!=} \PYG{n}{hdr}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{newSize} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+		\PYG{n}{leftSize} \PYG{o}{=} \PYG{n}{newSize} \PYG{o}{\PYGZhy{}} \PYG{n}{realSize}\PYG{p}{;}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mi}{0}\PYG{p}{)\PYGZob{}}
+		    \PYG{k}{if}\PYG{p}{(}\PYG{n}{leftSize} \PYG{o}{\PYGZgt{}=} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		    	\PYG{n}{SET}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{,} \PYG{n}{realSize}\PYG{p}{);}
+				\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+				\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+				\PYG{n}{memmove}\PYG{p}{(}\PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{),} \PYG{n}{ptr}\PYG{p}{,} \PYG{n}{copySize}\PYG{p}{);}
+				\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{nextHdr} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+				\PYG{n}{SET}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{,} \PYG{n}{leftSize}\PYG{p}{);}
+				\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{nextHdr}\PYG{p}{);}
+				\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+			\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+				\PYG{n}{SET}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{,} \PYG{n}{newSize}\PYG{p}{);}
+				\PYG{n}{SET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+				\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+				\PYG{n}{memmove}\PYG{p}{(}\PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{),} \PYG{n}{ptr}\PYG{p}{,} \PYG{n}{copySize}\PYG{p}{);}
+				\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{);}
+			\PYG{p}{\PYGZcb{}}
+		\PYG{p}{\PYGZcb{}}
+	\PYG{p}{\PYGZcb{}}
+	
+    \PYG{n}{newptr} \PYG{o}{=} \PYG{n}{mm\PYGZus{}malloc}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{newptr} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)}
+      \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{c+c1}{//    copySize = *(size\PYGZus{}t *)((char *)oldptr \PYGZhy{} SIZE\PYGZus{}T\PYGZus{}SIZE);}
+\PYG{c+c1}{//    if (size \PYGZlt{} copySize)}
+\PYG{c+c1}{//      copySize = size;}
+    \PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{,} \PYG{n}{oldptr}\PYG{p}{,} \PYG{n}{copySize}\PYG{p}{);}
+    \PYG{n}{mm\PYGZus{}free}\PYG{p}{(}\PYG{n}{oldptr}\PYG{p}{);}
+    \PYG{k}{return} \PYG{n}{newptr}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{int} \PYG{n+nf}{mm\PYGZus{}check}\PYG{p}{()} \PYG{p}{\PYGZob{}}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{search\PYGZus{}start}\PYG{p}{;}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{max\PYGZus{}heap} \PYG{o}{=} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{();}
+	\PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{o}{\PYGZlt{}=}\PYG{n}{max\PYGZus{}heap}\PYG{o}{\PYGZhy{}}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{o}{*}\PYG{l+m+mi}{2}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{c+c1}{// printf(\PYGZdq{}Checking block \PYGZpc{}p.. Alloc: \PYGZpc{}d, Size: \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, iterator, GET\PYGZus{}ALLOC(iterator), GET\PYGZus{}SIZE(iterator));}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{memcmp}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{,} \PYG{n}{FTRP}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{),} \PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+			\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}node \PYGZpc{}p and footer \PYGZpc{}p differ}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{iterator}\PYG{p}{,} \PYG{n}{FTRP}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{));}
+			\PYG{k}{for}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{i}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}\PYG{n}{i}\PYG{o}{\PYGZlt{}}\PYG{n}{SIZE\PYGZus{}T\PYGZus{}SIZE}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+				\PYG{k}{if}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]} \PYG{o}{!=} \PYG{n}{FTRP}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)[}\PYG{n}{i}\PYG{p}{])} \PYG{p}{\PYGZob{}}
+					\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}node[\PYGZpc{}d]:\PYGZpc{}x footer[\PYGZpc{}d]:\PYGZpc{}x}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{i}\PYG{p}{,} \PYG{p}{(}\PYG{k+kt}{int}\PYG{p}{)}\PYG{n}{iterator}\PYG{p}{[}\PYG{n}{i}\PYG{p}{]} \PYG{p}{,} \PYG{n}{i}\PYG{p}{,}  \PYG{p}{(}\PYG{k+kt}{int}\PYG{p}{)}\PYG{n}{FTRP}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)[}\PYG{n}{i}\PYG{p}{]);}
+				\PYG{p}{\PYGZcb{}}
+			\PYG{p}{\PYGZcb{}}
+			\PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+		\PYG{p}{\PYGZcb{}}
+		\PYG{n}{iterator} \PYG{o}{=} \PYG{n}{NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Last iterator: \PYGZpc{}p}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{iterator}\PYG{p}{);}
+	\PYG{k}{return} \PYG{l+m+mi}{1}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

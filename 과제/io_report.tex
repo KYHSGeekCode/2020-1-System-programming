@@ -1,0 +1,127 @@
+\documentclass{article}
+\usepackage{graphicx}
+\usepackage{kotex}
+\usepackage{lipsum}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage[a4paper, total={6in, 10in}]{geometry}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{color}
+\usepackage{minted}
+\usepackage{hyperref}
+% \renewcommand{\thesection}{\arabic{section}}
+
+\title{Fun with File Descriptors 레포트}
+\date{}
+\author{
+  2019-13674\\
+  양현서 \\
+  바이오시스템소재학부\\
+}
+\lstset{
+    basicstyle=\ttfamily\small,
+    numberstyle=\footnotesize,
+    numbers=left,
+    frame=single,
+    tabsize=2,
+    title=\lstname,
+    keywordstyle={\color{blue}}
+    escapeinside={\%*}{*)},
+    breaklines=true,
+    breakatwhitespace=true,
+    framextopmargin=2pt,
+    framexbottommargin=2pt,
+    extendedchars=false,
+    inputencoding=utf8
+}
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+
+\makeatletter
+\AtBeginEnvironment{minted}{\dontdofcolorbox}
+\def\dontdofcolorbox{\renewcommand\fcolorbox[4][]{##4}}
+\makeatother
+
+\begin{document}
+\maketitle
+\section{Fun with file Descriptors(1)}
+\begin{minted}[breaklines]{C}
+  #include "csapp.h"
+
+  int main(int argc, char * argv[]) {
+    int fd1, fd2, fd3;
+    char c1, c2, c3;
+    char * fname = argv[1];
+    fd1 = Open(fname, O_RDONLY, 0);
+    fd2 = Open(fname, O_RDONLY, 0);
+    fd3 = Open(fname, O_RDONLY, 0);
+    Dup2(fd2, fd3);
+    Read(fd1, & c1, 1);
+    Read(fd2, & c2, 1);
+    Read(fd3, & c3, 1);
+    printf("c1 = %c, c2 = %c, c3 = %c\n", c1, c2, c3);
+    return 0;
+  }
+\end{minted}
+
+답: c1 = a, c2 = a, c3 = b
+
+\section{Fun with file descriptors(2)}
+\begin{minted}[breaklines]{C}
+    #include "csapp.h"
+
+    int main(int argc, char * argv[]) {
+      int fd1;
+      int s = getpid() & 0x1;
+      char c1, c2;
+      char * fname = argv[1];
+      fd1 = Open(fname, O_RDONLY, 0);
+      Read(fd1, & c1, 1);
+      if (fork()) {
+        /* Parent */
+        sleep(s);
+        Read(fd1, & c2, 1);
+        printf("Parent: c1 = %c, c2 = %c\n", c1, c2);
+      } else {
+        /* Child */
+        sleep(1 - s);
+        Read(fd1, & c2, 1);
+        printf("Child: c1 = %c, c2 = %c\n", c1, c2);
+      }
+      return 0;
+    }
+\end{minted}
+답: \\
+ parent pid가 홀수(s=1)일때: \\
+ \hspace{10mm} Child: c1=a, c2=b \\
+ \hspace{10mm} Parent: c1=a, c2=c \\ 
+    parent pid가 짝수(s=0)일때: \\
+    \hspace{10mm} Parent: c1=a, c2=b \\
+    \hspace{10mm} Child: c1=a, c2=c
+    
+
+\section{Fun with file descriptors(3)}
+\begin{minted}[breaklines]{C}
+#include "csapp.h"
+
+int main(int argc, char * argv[]) {
+  int fd1, fd2, fd3;
+  char * fname = argv[1];
+  fd1 = Open(fname, O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
+  Write(fd1, "pqrs", 4);
+  fd3 = Open(fname, O_APPEND | O_WRONLY, 0);
+  Write(fd3, "jklmn", 5);
+  fd2 = dup(fd1); /* Allocates descriptor */
+  Write(fd2, "wxyz", 4);
+  Write(fd3, "ef", 2);
+  return 0;
+}
+\end{minted}
+답: pqrswxyznef
+
+\end{document}

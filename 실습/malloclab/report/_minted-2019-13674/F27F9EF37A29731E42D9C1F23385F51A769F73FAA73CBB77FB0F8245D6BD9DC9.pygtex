@@ -1,0 +1,286 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * mm\PYGZhy{}naive.c \PYGZhy{} The fastest, least memory\PYGZhy{}efficient malloc package.}
+\PYG{c+cm}{ * }
+\PYG{c+cm}{ * In this naive approach, a block is allocated by simply incrementing}
+\PYG{c+cm}{ * the brk pointer.  A block is pure payload. There are no headers or}
+\PYG{c+cm}{ * footers.  Blocks are never coalesced or reused. Realloc is}
+\PYG{c+cm}{ * implemented directly using mm\PYGZus{}malloc and mm\PYGZus{}free.}
+\PYG{c+cm}{ *}
+\PYG{c+cm}{ * NOTE TO STUDENTS: Replace this header comment with your own header}
+\PYG{c+cm}{ * comment that gives a high level description of your solution.}
+\PYG{c+cm}{ */}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdio.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdlib.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}assert.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}unistd.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}string.h\PYGZgt{}}
+
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}mm.h\PYGZdq{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}memlib.h\PYGZdq{}}
+
+\PYG{c+cm}{/*********************************************************}
+\PYG{c+cm}{ * NOTE TO STUDENTS: Before you do anything else, please}
+\PYG{c+cm}{ * provide your team information in the following struct.}
+\PYG{c+cm}{ ********************************************************/}
+
+\PYG{c+cm}{/* single word (4) or double word (8) alignment */}
+\PYG{c+cp}{\PYGZsh{}define ALIGNMENT 8}
+
+\PYG{c+cm}{/* rounds up to the nearest multiple of ALIGNMENT */}
+\PYG{c+cp}{\PYGZsh{}define ALIGN(size) (((size) + (ALIGNMENT\PYGZhy{}1)) \PYGZam{} \PYGZti{}0x7)}
+
+
+\PYG{c+cp}{\PYGZsh{}define SIZE\PYGZus{}T\PYGZus{}SIZE (ALIGN(sizeof(size\PYGZus{}t)))}
+
+\PYG{k}{typedef} \PYG{k}{struct} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node\PYGZus{}t}\PYG{p}{\PYGZob{}}
+	\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{;}
+	\PYG{k}{struct} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node\PYGZus{}t} \PYG{o}{*}\PYG{n}{parent}\PYG{p}{;}
+	\PYG{k}{struct} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node\PYGZus{}t} \PYG{o}{*}\PYG{n}{left}\PYG{p}{;}
+	\PYG{k}{struct} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node\PYGZus{}t} \PYG{o}{*}\PYG{n}{right}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}} \PYG{n}{\PYGZus{}\PYGZus{}attribute\PYGZus{}\PYGZus{}}\PYG{p}{((}\PYG{n}{aligned}\PYG{p}{(}\PYG{n}{ALIGNMENT}\PYG{p}{)))} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node}\PYG{p}{;}
+
+\PYG{k}{static} \PYG{k+kt}{char}\PYG{o}{*} \PYG{n}{heap\PYGZus{}start} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{heap\PYGZus{}end} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{k}{static} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{root} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+
+\PYG{c+cp}{\PYGZsh{}define GET\PYGZus{}SIZE(hdrptr) ((hdrptr)\PYGZhy{}\PYGZgt{}size \PYGZam{} \PYGZti{}0x7)}
+\PYG{c+cp}{\PYGZsh{}define GET\PYGZus{}ALLOC(hdrptr) ((hdrptr)\PYGZhy{}\PYGZgt{}size \PYGZam{} 0x1)}
+\PYG{c+cp}{\PYGZsh{}define SET\PYGZus{}FREE(hdrptr) ((hdrptr)\PYGZhy{}\PYGZgt{}size \PYGZam{}= \PYGZti{}0x7)}
+\PYG{c+cp}{\PYGZsh{}define SET\PYGZus{}ALLOC(hdrptr) ((hdrptr)\PYGZhy{}\PYGZgt{}size |= 0x1)}
+\PYG{c+cp}{\PYGZsh{}define MAKE\PYGZus{}TOTAL\PYGZus{}SIZE(size) (ALIGN(size+ 2* sizeof(memhdr\PYGZus{}tree\PYGZus{}node))) }
+
+\PYG{c+cp}{\PYGZsh{}define HDRP(ptr) ((memhdr\PYGZus{}tree\PYGZus{}node *)((char*)(ptr) \PYGZhy{} sizeof(memhdr\PYGZus{}tree\PYGZus{}node)))}
+\PYG{c+cp}{\PYGZsh{}define FTRP(ptr) ((char*)(ptr) +  GET\PYGZus{}SIZE(HDRP(ptr)) \PYGZhy{} sizeof(memhdr\PYGZus{}tree\PYGZus{}node))}
+\PYG{c+cp}{\PYGZsh{}define HDR2PTR(hdrptr) (((char*)hdrptr)+sizeof(memhdr\PYGZus{}tree\PYGZus{}node))}
+\PYG{c+c1}{// physically next header}
+\PYG{c+c1}{//\PYGZsh{}define PHS\PYGZus{}NEXT\PYGZus{}HDR(hdrptr) ((memhdr\PYGZus{}tree\PYGZus{}node *)((char*)hdrptr + (hdrptr)\PYGZhy{}\PYGZgt{}size))}
+\PYG{c+c1}{// physically previous header}
+\PYG{c+c1}{//\PYGZsh{}define PHS\PYGZus{}PREV\PYGZus{}HDR(hdrptr) ((memhdr\PYGZus{}tree\PYGZus{}node* )(((char*)hdrptr) \PYGZhy{} ((memhdr\PYGZus{}tree\PYGZus{}node*)((char*) hdrptr \PYGZhy{} sizeof(memhdr\PYGZus{}tree\PYGZus{}node)))\PYGZhy{}\PYGZgt{}size))}
+\PYG{k}{static} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n+nf}{PHS\PYGZus{}PREV\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{hdrptr}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+	\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{prevFooter} \PYG{o}{=} \PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*}\PYG{p}{)} \PYG{p}{(((}\PYG{k+kt}{char}\PYG{o}{*}\PYG{p}{)}\PYG{n}{hdrptr}\PYG{p}{)}\PYG{o}{\PYGZhy{}}\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node}\PYG{p}{));}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{prevFooter} \PYG{o}{==} \PYG{n+nb}{NULL} \PYG{o}{||} \PYG{n}{prevFooter} \PYG{o}{\PYGZgt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{()} \PYG{o}{||} \PYG{n}{prevFooter} \PYG{o}{\PYGZlt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}lo}\PYG{p}{())}
+		\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{k}{return} \PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{p}{)(((}\PYG{k+kt}{char}\PYG{o}{*}\PYG{p}{)}\PYG{n}{hdrptr}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{prevFooter}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{static} \PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n+nf}{PHS\PYGZus{}NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{hdrptr}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+	\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{result} \PYG{o}{=}  \PYG{p}{((}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*}\PYG{p}{)((}\PYG{k+kt}{char}\PYG{o}{*}\PYG{p}{)}\PYG{n}{hdrptr} \PYG{o}{+} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{hdrptr}\PYG{p}{)));}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{result} \PYG{o}{==} \PYG{n+nb}{NULL} \PYG{o}{||} \PYG{n}{result} \PYG{o}{\PYGZgt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{()} \PYG{o}{||} \PYG{n}{result} \PYG{o}{\PYGZlt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}lo}\PYG{p}{())}
+		\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{k}{return} \PYG{n}{result}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * mm\PYGZus{}init \PYGZhy{} initialize the malloc package.}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{int} \PYG{n+nf}{mm\PYGZus{}init}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+	\PYG{n}{heap\PYGZus{}start} \PYG{o}{=} \PYG{n}{mem\PYGZus{}heap\PYGZus{}lo}\PYG{p}{();}
+	\PYG{n}{heap\PYGZus{}end} \PYG{o}{=} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{();}
+	\PYG{c+c1}{//mem\PYGZus{}sbrk(sizeof(memhdr\PYGZus{}tree\PYGZus{}node)*2);}
+	\PYG{n}{root} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;} \PYG{c+c1}{//(memhdr\PYGZus{}tree\PYGZus{}node *) heap\PYGZus{}start;}
+	\PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{n+nf}{writeFooter}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{node}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{node} \PYG{o}{\PYGZgt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{()} \PYG{o}{||} \PYG{n}{node} \PYG{o}{\PYGZlt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}lo}\PYG{p}{())}
+		\PYG{k}{return}\PYG{p}{;}
+	\PYG{k+kt}{char}\PYG{o}{*} \PYG{n}{footerAddr} \PYG{o}{=} \PYG{p}{((}\PYG{k+kt}{char}\PYG{o}{*}\PYG{p}{)}\PYG{n}{node}\PYG{p}{)}\PYG{o}{+}\PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{node}\PYG{p}{)}\PYG{o}{\PYGZhy{}}\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node}\PYG{p}{);}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{footerAddr} \PYG{o}{\PYGZgt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}hi}\PYG{p}{()} \PYG{o}{||} \PYG{n}{footerAddr} \PYG{o}{\PYGZlt{}} \PYG{n}{mem\PYGZus{}heap\PYGZus{}lo}\PYG{p}{())}
+		\PYG{k}{return}\PYG{p}{;}
+	\PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{footerAddr}\PYG{p}{,} \PYG{n}{node}\PYG{p}{,} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node}\PYG{p}{));}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{static} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n+nf}{find\PYGZus{}fit}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{**} \PYG{n}{parent}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+	\PYG{c+c1}{//printf(\PYGZdq{}\PYGZpc{}p\PYGZbs{}n\PYGZdq{}, *parent);}
+	\PYG{c+c1}{// printf(\PYGZdq{}Find\PYGZus{}fit \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, size);}
+	\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{total\PYGZus{}size} \PYG{o}{=} \PYG{n}{MAKE\PYGZus{}TOTAL\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+	\PYG{c+c1}{// printf(\PYGZdq{}Total\PYGZus{}size \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, total\PYGZus{}size);}
+	\PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// new node created}
+		\PYG{o}{*}\PYG{n}{parent} \PYG{o}{=} \PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*}\PYG{p}{)} \PYG{n}{mem\PYGZus{}sbrk}\PYG{p}{(}\PYG{n}{total\PYGZus{}size}\PYG{p}{);}
+		\PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent} \PYG{o}{==} \PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{)}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)}
+			\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+		\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{size} \PYG{o}{=} \PYG{n}{total\PYGZus{}size} \PYG{o}{|} \PYG{l+m+mh}{0x1}\PYG{p}{;} \PYG{c+c1}{// Allocated}
+		\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{left} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+		\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{right} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{c+c1}{//		PHS\PYGZus{}NEXT\PYGZus{}HDR(*parent)\PYGZhy{}\PYGZgt{} size=0;}
+		\PYG{n}{writeFooter}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{);}
+		\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{);}
+	\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{GET\PYGZus{}ALLOC}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)} \PYG{o}{\PYGZgt{}=} \PYG{n}{total\PYGZus{}size}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+			\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{size} \PYG{o}{=} \PYG{n}{total\PYGZus{}size} \PYG{o}{|} \PYG{l+m+mh}{0x1}\PYG{p}{;}
+			\PYG{n}{writeFooter}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{);}
+			\PYG{k}{return} \PYG{n}{HDR2PTR}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{);}
+		\PYG{p}{\PYGZcb{}}  \PYG{k}{else} \PYG{p}{\PYGZob{}}
+			
+			\PYG{c+c1}{//free, but not enough space}
+		\PYG{p}{\PYGZcb{}}
+	\PYG{p}{\PYGZcb{}} 
+	\PYG{c+c1}{// already allocated}
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{result}\PYG{p}{;} \PYG{c+c1}{// = *parent; // test for *}
+	\PYG{c+c1}{// MAGIC}
+	\PYG{c+c1}{//(*parent)\PYGZhy{}\PYGZgt{}left = NULL;}
+	\PYG{c+c1}{//(*parent)\PYGZhy{}\PYGZgt{}right = NULL;}
+	\PYG{k}{if}\PYG{p}{((}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{right} \PYG{o}{\PYGZam{}\PYGZam{}}  \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{((}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{right}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{right} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k}{if}\PYG{p}{((}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{left} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{((}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{left}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{left} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{total\PYGZus{}size} \PYG{o}{\PYGZgt{}} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+		\PYG{n}{result} \PYG{o}{=} \PYG{n}{find\PYGZus{}fit}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{p}{((}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{right}\PYG{p}{),} \PYG{n}{size}\PYG{p}{);} \PYG{c+c1}{// allocate new and set as right if this node did not have data}
+	\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+		\PYG{n}{result} \PYG{o}{=} \PYG{n}{find\PYGZus{}fit}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{p}{((}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{left}\PYG{p}{),} \PYG{n}{size}\PYG{p}{);}		
+	\PYG{p}{\PYGZcb{}}
+	\PYG{n}{writeFooter}\PYG{p}{(}\PYG{o}{*}\PYG{n}{parent}\PYG{p}{);}
+	\PYG{c+c1}{//HDRP(result) \PYGZhy{}\PYGZgt{} left = NULL;}
+	\PYG{c+c1}{//HDRP(result) \PYGZhy{}\PYGZgt{} right = NULL;}
+	\PYG{k}{return} \PYG{n}{result}\PYG{p}{;}
+
+	
+\PYG{c+c1}{//	 if((!GET\PYGZus{}ALLOC(*parent)) \PYGZam{}\PYGZam{} ) \PYGZob{}}
+\PYG{c+c1}{//		size\PYGZus{}t old\PYGZus{}parent\PYGZus{}size = GET\PYGZus{}SIZE(*parent);}
+\PYG{c+c1}{//		SET\PYGZus{}ALLOC(*parent);}
+		
+		\PYG{c+c1}{//(*parent) \PYGZhy{}\PYGZgt{} left = NULL;}
+		\PYG{c+c1}{//(*parent) \PYGZhy{}\PYGZgt{} right = NULL;}
+\PYG{c+c1}{//		// split leftover as a new block if available}
+\PYG{c+c1}{//		if(old\PYGZus{}parent\PYGZus{}size \PYGZhy{} total\PYGZus{}size \PYGZgt{} 2*sizeof(memhdr\PYGZus{}tree\PYGZus{}node) + ALIGNMENT) \PYGZob{}}
+\PYG{c+c1}{//			memhdr\PYGZus{}tree\PYGZus{}node * phy\PYGZus{}next = PHS\PYGZus{}NEXT\PYGZus{}HDR(*parent);}
+\PYG{c+c1}{//			phy\PYGZus{}next\PYGZhy{}\PYGZgt{}size = (old\PYGZus{}parent\PYGZus{}size \PYGZhy{} total\PYGZus{}size) \PYGZam{} \PYGZti{}0x7;}
+\PYG{c+c1}{//			phy\PYGZus{}next\PYGZhy{}\PYGZgt{}left = NULL;}
+\PYG{c+c1}{//			phy\PYGZus{}next\PYGZhy{}\PYGZgt{}right = NULL;}
+\PYG{c+c1}{//			find\PYGZus{}fit(\PYGZam{}root, phy\PYGZus{}next\PYGZhy{}\PYGZgt{}size \PYGZhy{} 2*sizeof(memhdr\PYGZus{}tree\PYGZus{}node));}
+\PYG{c+c1}{//		\PYGZcb{}}
+\PYG{c+c1}{//		// reorder tree           }
+\PYG{c+c1}{//		writeFooter(*parent);}
+\PYG{c+c1}{//		return HDR2PTR(*parent);}
+\PYG{c+c1}{//	\PYGZcb{}}
+\PYG{c+c1}{//	 else if(!GET\PYGZus{}ALLOC(*parent))\PYGZob{}}
+\PYG{c+c1}{//		memhdr\PYGZus{}tree\PYGZus{}node * hdr = *parent;}
+\PYG{c+c1}{//		while(hdr != NULL \PYGZam{}\PYGZam{} ((char*)hdr) \PYGZlt{} mem\PYGZus{}heap\PYGZus{}hi() \PYGZhy{} 2*sizeof(memhdr\PYGZus{}tree\PYGZus{}node) \PYGZam{}\PYGZam{}  !(GET\PYGZus{}ALLOC(hdr))) \PYGZob{}}
+\PYG{c+c1}{//			(*parent)\PYGZhy{}\PYGZgt{}size += GET\PYGZus{}SIZE(hdr);}
+\PYG{c+c1}{//			(*parent)\PYGZhy{}\PYGZgt{}size \PYGZam{}= \PYGZti{}0x7;}
+\PYG{c+c1}{//			hdr = PHS\PYGZus{}NEXT\PYGZus{}HDR(hdr);}
+\PYG{c+c1}{//		\PYGZcb{}}
+\PYG{c+c1}{//		writeFooter(*parent);}
+\PYG{c+c1}{//	\PYGZcb{}}
+\PYG{c+c1}{////	}
+\PYG{c+c1}{//	//if(!GET\PYGZus{}ALLOC(*parent)) \PYGZob{}}
+\PYG{c+c1}{////		(*parent)\PYGZhy{}\PYGZgt{}right = NULL;}
+\PYG{c+c1}{////		(*parent)\PYGZhy{}\PYGZgt{}left = NULL;}
+\PYG{c+c1}{//	//\PYGZcb{}}
+\PYG{c+c1}{//	char * result;}
+\PYG{c+c1}{//	if(total\PYGZus{}size \PYGZgt{} GET\PYGZus{}SIZE(*parent)) \PYGZob{}}
+\PYG{c+c1}{//		result = find\PYGZus{}fit(\PYGZam{}((*parent)\PYGZhy{}\PYGZgt{}right), size);}
+\PYG{c+c1}{//	\PYGZcb{} else \PYGZob{}}
+\PYG{c+c1}{//		result = find\PYGZus{}fit(\PYGZam{}((*parent)\PYGZhy{}\PYGZgt{}left), size);		}
+\PYG{c+c1}{//	\PYGZcb{}}
+\PYG{c+c1}{//		HDRP(result) \PYGZhy{}\PYGZgt{} parent = *parent;}
+	\PYG{c+c1}{//return result;}
+	
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* }
+\PYG{c+cm}{ * mm\PYGZus{}malloc \PYGZhy{} to find the best fit, use always sorted data structure like tree.}
+\PYG{c+cm}{ * search the best fit place from the tree, and increase heap size if not found. }
+\PYG{c+cm}{ *     Always allocate a block whose size is a multiple of the alignment.}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{o}{*}\PYG{n+nf}{mm\PYGZus{}malloc}\PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{size} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)}
+		\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+		
+	\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{block} \PYG{o}{=} \PYG{n}{find\PYGZus{}fit}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{root}\PYG{p}{,} \PYG{n}{size}\PYG{p}{);}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{block} \PYG{o}{!=} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{block}\PYG{p}{)}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent} \PYG{o}{=} \PYG{n}{root}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	
+\PYG{c+c1}{//	if(block != NULL) \PYGZob{}}
+		\PYG{c+c1}{// place\PYGZus{}block(block, size);}
+		\PYG{k}{return} \PYG{n}{block}\PYG{p}{;}
+\PYG{c+c1}{//	\PYGZcb{}}
+\PYG{c+c1}{//	return NULL;}
+\PYG{c+c1}{//    int newsize = ALIGN(size + SIZE\PYGZus{}T\PYGZus{}SIZE);}
+\PYG{c+c1}{//    void *p = mem\PYGZus{}sbrk(newsize);}
+\PYG{c+c1}{//    if (p == (void *)\PYGZhy{}1)}
+\PYG{c+c1}{//		return NULL;}
+\PYG{c+c1}{//    else \PYGZob{}}
+\PYG{c+c1}{//        *(size\PYGZus{}t *)p = size;}
+\PYG{c+c1}{//        return (void *)((char *)p + SIZE\PYGZus{}T\PYGZus{}SIZE);}
+\PYG{c+c1}{//    \PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * mm\PYGZus{}free \PYGZhy{} Freeing a block does nothing but mark the block as free}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{n+nf}{mm\PYGZus{}free}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+	\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{header} \PYG{o}{=} \PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{);}
+	\PYG{n}{SET\PYGZus{}FREE}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+	\PYG{n}{writeFooter}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+	\PYG{c+c1}{// Coerce right}
+	\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node} \PYG{o}{*} \PYG{n}{phy\PYGZus{}next} \PYG{o}{=} \PYG{n}{PHS\PYGZus{}NEXT\PYGZus{}HDR}\PYG{p}{(}\PYG{n}{header}\PYG{p}{);}
+\PYG{c+c1}{//	printf(\PYGZdq{}next:\PYGZpc{}p\PYGZbs{}n\PYGZdq{}, phy\PYGZus{}next);}
+\PYG{c+c1}{//	if(phy\PYGZus{}next \PYGZam{}\PYGZam{}  !GET\PYGZus{}ALLOC(phy\PYGZus{}next)) \PYGZob{} // not allocated and exists}
+\PYG{c+c1}{//		header\PYGZhy{}\PYGZgt{} size = GET\PYGZus{}SIZE(header) + GET\PYGZus{}SIZE(phy\PYGZus{}next);}
+\PYG{c+c1}{//		phy\PYGZus{}next\PYGZhy{}\PYGZgt{} size = 1; // fake}
+\PYG{c+c1}{//		// TODO: update tree}
+\PYG{c+c1}{//		writeFooter(header);}
+\PYG{c+c1}{//	\PYGZcb{}}
+\PYG{c+c1}{//	memhdr\PYGZus{}tree\PYGZus{}node * phy\PYGZus{}prev = PHS\PYGZus{}PREV\PYGZus{}HDR(header);}
+\PYG{c+c1}{////	printf(\PYGZdq{}prev:\PYGZpc{}p\PYGZbs{}n\PYGZdq{}, phy\PYGZus{}prev);}
+\PYG{c+c1}{//	if(phy\PYGZus{}prev \PYGZam{}\PYGZam{}!GET\PYGZus{}ALLOC(phy\PYGZus{}prev)) \PYGZob{}}
+\PYG{c+c1}{//		phy\PYGZus{}prev \PYGZhy{}\PYGZgt{} size = GET\PYGZus{}SIZE(header) + GET\PYGZus{}SIZE(phy\PYGZus{}prev);}
+\PYG{c+c1}{//		header\PYGZhy{}\PYGZgt{}size = 1; // fake}
+\PYG{c+c1}{////		if(header\PYGZhy{}\PYGZgt{}parent!=NULL) \PYGZob{}}
+\PYG{c+c1}{////			if(header\PYGZhy{}\PYGZgt{}parent\PYGZhy{}\PYGZgt{}left == header) \PYGZob{}}
+\PYG{c+c1}{////				header\PYGZhy{}\PYGZgt{}parent\PYGZhy{}\PYGZgt{}left = phy\PYGZus{}prev;}
+\PYG{c+c1}{////			\PYGZcb{} else if(header\PYGZhy{}\PYGZgt{}parent\PYGZhy{}\PYGZgt{}right == header) \PYGZob{}}
+\PYG{c+c1}{////				header\PYGZhy{}\PYGZgt{}parent\PYGZhy{}\PYGZgt{}right = phy\PYGZus{}prev;}
+\PYG{c+c1}{////			\PYGZcb{}}
+\PYG{c+c1}{////			phy\PYGZus{}prev\PYGZhy{}\PYGZgt{}parent = header\PYGZhy{}\PYGZgt{}parent;}
+\PYG{c+c1}{////		\PYGZcb{}}
+\PYG{c+c1}{//		// TODO: Update tree   }
+\PYG{c+c1}{//		writeFooter(phy\PYGZus{}prev);}
+\PYG{c+c1}{//	\PYGZcb{}}
+	\PYG{c+c1}{// reorder tree}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{header} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{left} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{header} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{right} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+			
+		\PYG{p}{\PYGZcb{}}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{c+c1}{//header \PYGZhy{}\PYGZgt{} left = NULL;}
+	\PYG{c+c1}{//header \PYGZhy{}\PYGZgt{} right = NULL;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{ * mm\PYGZus{}realloc \PYGZhy{} Implemented simply in terms of mm\PYGZus{}malloc and mm\PYGZus{}free}
+\PYG{c+cm}{ */}
+\PYG{k+kt}{void} \PYG{o}{*}\PYG{n+nf}{mm\PYGZus{}realloc}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//	printf(\PYGZdq{}realloc\PYGZdq{});}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{ptr} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)}
+		\PYG{k}{return} \PYG{n}{mm\PYGZus{}malloc}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{size} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{mm\PYGZus{}free}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{);}
+		\PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	
+    \PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{oldptr} \PYG{o}{=} \PYG{n}{ptr}\PYG{p}{;}
+    \PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{newptr}\PYG{p}{;}
+    \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{copySize}\PYG{p}{;}
+    
+    \PYG{n}{newptr} \PYG{o}{=} \PYG{n}{mm\PYGZus{}malloc}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{newptr} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)}
+      \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{copySize} \PYG{o}{=} \PYG{n}{GET\PYGZus{}SIZE}\PYG{p}{(}\PYG{n}{HDRP}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{))} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{2}\PYG{o}{*} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{memhdr\PYGZus{}tree\PYGZus{}node}\PYG{p}{);}\PYG{c+c1}{//*(size\PYGZus{}t *)((char *)oldptr \PYGZhy{} 2*sizeof(memhdr\PYGZus{}tree\PYGZus{}node));}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{size} \PYG{o}{\PYGZlt{}} \PYG{n}{copySize}\PYG{p}{)}
+      \PYG{n}{copySize} \PYG{o}{=} \PYG{n}{size}\PYG{p}{;}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{newptr} \PYG{o}{!=} \PYG{n}{oldptr}\PYG{p}{)}
+	    \PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{newptr}\PYG{p}{,} \PYG{n}{oldptr}\PYG{p}{,} \PYG{n}{copySize}\PYG{p}{);}
+    \PYG{n}{mm\PYGZus{}free}\PYG{p}{(}\PYG{n}{oldptr}\PYG{p}{);}
+    \PYG{k}{return} \PYG{n}{newptr}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

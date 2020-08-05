@@ -1,0 +1,69 @@
+========doProxy===========
+parseRequest : fd에서 소켓에서 읽어서 parsedRequest 에 저장. 리턴값은 스택에서 복사됨
+		.uri = strdup
+		.httpVersion = strdup
+		.method
+		.params = (chain of malloced structs) with strduped field, value
+		.content = NULL  or malloced
+		.host = NULL or strdup if found
+
+==========================
+만약 이상한 method라면
+freeParsedRequest
+parsedRequest에 대해
+		free	.uri
+			.uri = NULL
+		free	.httpVersion
+			.httpVersion = NULL
+		free	.method
+			.method = NULL
+		free	chain of malloced httpParams = NULL
+		free	.host = NULL
+		free 	.content = NULL
+======================================
+execRequest_Cached
+LRUCache_get(&cache, parsed->uri, (void*)parsed)
+=====================================
+LRUCache_Hash_Get(cache, key, metadata)
+hash를 하고
+cache->hashToListNode에 접근
+없으면 없다.
+있으면
+키와 같은 것이 있는지 찾아본다
+======================================
+찾았으면
+data를 찾아와 맨 앞으로 가져온다.
+못찾았으면
+createData 호출
+metadata(parsedReqeuest)를 이용하여 execRequest
+======================================execRequest===============
+hostname을 parsed->host(다이내믹) 또는 getHostFromURI로 얻어옴
+====================getHostFromURI=============
+""
+============================================
+guessPortFromURI : 파싱하여 갖다줌. parsed->URI 사용
+parsed의 정보를 이용하여 열심히 씀
+responseData malloc함
+response->data에 전부 집어 넣음. 동적 메모리 할당
+return
+=====================================execRequest done=============
+lrunode 새로 할당
+data와 length를 shallow copy
+=================================================CreateData done+=============
+맨앞에 삽입
+용량 넘치면 삭제. HashListNode를 삭제. LRUNode의 data도 삭제. LRUNode도 삭제
+LRUCache_Hash_Put(key, newnode)
+newListNode 새로 할당
+data는 shallow copy, key는 strdup
+해시테이블의 링크드 리스트에 삽입
+========================================================
+response를 새로 생성하여 node의 데이터, 사이즈, uri를 shallow copy
+
+========================replyRequest
+있으면 써버린다.
+========================================
+freeParsedRequest 
+result->data
+result
+삭제
+종료

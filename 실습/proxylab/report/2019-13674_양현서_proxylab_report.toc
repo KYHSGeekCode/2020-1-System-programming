@@ -1,0 +1,21 @@
+\contentsline {section}{\numberline {1}Introduction}{1}{section.0.1}%
+\contentsline {paragraph}{}{1}{section*.2}%
+\contentsline {section}{\numberline {2}Part 1: Implementing a sequential web proxy}{1}{section.0.2}%
+\contentsline {subsection}{\numberline {2.1}요청 해석}{2}{subsection.0.2.1}%
+\contentsline {subsection}{\numberline {2.2}요청 실행}{5}{subsection.0.2.2}%
+\contentsline {subsection}{\numberline {2.3}응답 전달}{7}{subsection.0.2.3}%
+\contentsline {subsection}{\numberline {2.4}보조 함수들}{7}{subsection.0.2.4}%
+\contentsline {subsubsection}{whitespce 제거}{7}{section*.3}%
+\contentsline {subsubsection}{URI에서 호스트 파싱}{7}{section*.4}%
+\contentsline {subsubsection}{URI에서 포트 파싱}{8}{section*.5}%
+\contentsline {subsubsection}{URI에서 상대 경로 얻기}{9}{section*.6}%
+\contentsline {section}{\numberline {3}Part 2: Dealing with multiple concurrent requests}{10}{section.0.3}%
+\contentsline {section}{\numberline {4}Part 3: Caching web objects}{10}{section.0.4}%
+\contentsline {subsection}{\numberline {4.1}LRU Cache}{10}{subsection.0.4.1}%
+\contentsline {subsubsection}{자료 구조}{10}{section*.7}%
+\contentsline {subsubsection}{작동 구조}{11}{section*.8}%
+\contentsline {subsection}{\numberline {4.2}보조 함수 - 시그널 핸들러를 이용하여 Ctrl+C를 눌렀을 때 메모리를 해제 \& SIGPIPE 차단}{14}{subsection.0.4.2}%
+\contentsline {section}{\numberline {5}Conclusion}{14}{section.0.5}%
+\contentsline {subsection}{\numberline {5.1}어려웠던 점}{14}{subsection.0.5.1}%
+\contentsline {subsubsection}{메모리 누수, Segmentation fault}{14}{section*.9}%
+\contentsline {subsection}{\numberline {5.2}놀라웠던 점}{14}{subsection.0.5.2}%

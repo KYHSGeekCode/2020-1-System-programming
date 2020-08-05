@@ -1,0 +1,50 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part1\PYGZdl{} make run test4}
+\PYG{g+go}{cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{[0001] Memory tracer started.}
+\PYG{g+go}{[0002]           (nil) : malloc( 1024 ) = 0x107c060}
+\PYG{g+go}{[0003]           (nil) : free( 0x107c060 )}
+\PYG{g+go}{[0004]           (nil) : free( 0x107c060 )}
+\PYG{g+go}{*** Error in `../test/test4\PYGZsq{}: double free or corruption (top): 0x000000000107c060 ***}
+\PYG{g+go}{[0005]           (nil) : malloc( 36 ) = 0x7f4b8c0008c0}
+\PYG{g+go}{[0006]           (nil) : calloc( 1182 , 1 ) = 0x7f4b8c0008f0}
+\PYG{g+go}{[0007]           (nil) : malloc( 36 ) = 0x7f4b8c000da0}
+\PYG{g+go}{[0008]           (nil) : malloc( 56 ) = 0x7f4b8c000dd0}
+\PYG{g+go}{[0009]           (nil) : calloc( 15 , 24 ) = 0x7f4b8c000e10}
+\PYG{g+go}{======= Backtrace: =========}
+\PYG{g+go}{/lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/libc.so.6(+0x777e5)[0x7f4b930647e5]}
+\PYG{g+go}{/lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/libc.so.6(+0x8037a)[0x7f4b9306d37a]}
+\PYG{g+go}{/lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/libc.so.6(cfree+0x4c)[0x7f4b9307153c]}
+\PYG{g+go}{./libmemtrace.so(free+0x39)[0x7f4b933b7d8a]}
+\PYG{g+go}{../test/test4[0x40048e]}
+\PYG{g+go}{/lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/libc.so.6(\PYGZus{}\PYGZus{}libc\PYGZus{}start\PYGZus{}main+0xf0)[0x7f4b9300d830]}
+\PYG{g+go}{../test/test4[0x4004c9]}
+\PYG{g+go}{======= Memory map: ========}
+\PYG{g+go}{00400000\PYGZhy{}00401000 r\PYGZhy{}xp 00000000 ca:01 657555                             /home/user102/handout/test/test4}
+\PYG{g+go}{00600000\PYGZhy{}00601000 r\PYGZhy{}\PYGZhy{}p 00000000 ca:01 657555                             /home/user102/handout/test/test4}
+\PYG{g+go}{00601000\PYGZhy{}00602000 rw\PYGZhy{}p 00001000 ca:01 657555                             /home/user102/handout/test/test4}
+\PYG{g+go}{0107c000\PYGZhy{}0109d000 rw\PYGZhy{}p 00000000 00:00 0                                  [heap]}
+\PYG{g+go}{7f4b8c000000\PYGZhy{}7f4b8c021000 rw\PYGZhy{}p 00000000 00:00 0}
+\PYG{g+go}{7f4b8c021000\PYGZhy{}7f4b90000000 \PYGZhy{}\PYGZhy{}\PYGZhy{}p 00000000 00:00 0}
+\PYG{g+go}{7f4b92bd3000\PYGZhy{}7f4b92be9000 r\PYGZhy{}xp 00000000 ca:01 2097679                    /lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/libgcc\PYGZus{}s.so.1}
+\PYG{g+go}{... (중략)}
+\PYG{g+go}{7f4b933b1000\PYGZhy{}7f4b933b3000 rw\PYGZhy{}p 001c4000 ca:01 2097653                    /lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/libc\PYGZhy{}2.23.so}
+\PYG{g+go}{7f4b933b3000\PYGZhy{}7f4b933b7000 rw\PYGZhy{}p 00000000 00:00 0}
+\PYG{g+go}{7f4b933b7000\PYGZhy{}7f4b933b9000 r\PYGZhy{}xp 00000000 ca:01 657531                     /home/user102/handout/part1/libmemtrace.so}
+\PYG{g+go}{7f4b933b9000\PYGZhy{}7f4b935b8000 \PYGZhy{}\PYGZhy{}\PYGZhy{}p 00002000 ca:01 657531                     /home/user102/handout/part1/libmemtrace.so}
+\PYG{g+go}{7f4b935b8000\PYGZhy{}7f4b935b9000 r\PYGZhy{}\PYGZhy{}p 00001000 ca:01 657531                     /home/user102/handout/part1/libmemtrace.so}
+\PYG{g+go}{7f4b935b9000\PYGZhy{}7f4b935ba000 rw\PYGZhy{}p 00002000 ca:01 657531                     /home/user102/handout/part1/libmemtrace.so}
+\PYG{g+go}{7f4b935ba000\PYGZhy{}7f4b935e0000 r\PYGZhy{}xp 00000000 ca:01 2097629                    /lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/ld\PYGZhy{}2.23.so}
+\PYG{g+go}{7f4b937d5000\PYGZhy{}7f4b937d8000 rw\PYGZhy{}p 00000000 00:00 0}
+\PYG{g+go}{7f4b937dd000\PYGZhy{}7f4b937df000 rw\PYGZhy{}p 00000000 00:00 0}
+\PYG{g+go}{7f4b937df000\PYGZhy{}7f4b937e0000 r\PYGZhy{}\PYGZhy{}p 00025000 ca:01 2097629                    /lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/ld\PYGZhy{}2.23.so}
+\PYG{g+go}{7f4b937e0000\PYGZhy{}7f4b937e1000 rw\PYGZhy{}p 00026000 ca:01 2097629                    /lib/x86\PYGZus{}64\PYGZhy{}linux\PYGZhy{}gnu/ld\PYGZhy{}2.23.so}
+\PYG{g+go}{7f4b937e1000\PYGZhy{}7f4b937e2000 rw\PYGZhy{}p 00000000 00:00 0}
+\PYG{g+go}{7ffd8755e000\PYGZhy{}7ffd8757f000 rw\PYGZhy{}p 00000000 00:00 0                          [stack]}
+\PYG{g+go}{7ffd87581000\PYGZhy{}7ffd87584000 r\PYGZhy{}\PYGZhy{}p 00000000 00:00 0                          [vvar]}
+\PYG{g+go}{7ffd87584000\PYGZhy{}7ffd87586000 r\PYGZhy{}xp 00000000 00:00 0                          [vdso]}
+\PYG{g+go}{ffffffffff600000\PYGZhy{}ffffffffff601000 r\PYGZhy{}xp 00000000 00:00 0                  [vsyscall]}
+\PYG{g+go}{Aborted (core dumped)}
+\PYG{g+go}{Makefile:37: recipe for target \PYGZsq{}run\PYGZsq{} failed}
+\PYG{g+go}{make: *** [run] Error 134}
+\end{Verbatim}

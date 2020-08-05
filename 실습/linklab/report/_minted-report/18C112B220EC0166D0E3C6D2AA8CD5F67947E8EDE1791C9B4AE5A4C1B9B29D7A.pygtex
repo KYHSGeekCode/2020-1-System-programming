@@ -1,0 +1,17 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part3\PYGZdl{} objdump \PYGZhy{}d ../test/test2}
+\PYG{g+go}{  (중략)}
+\PYG{g+go}{  Disassembly of section .text:}
+
+\PYG{g+go}{0000000000400470 \PYGZlt{}main\PYGZgt{}:}
+\PYG{g+go}{  400470:       48 83 ec 08             sub    \PYGZdl{}0x8,\PYGZpc{}rsp}
+\PYG{g+go}{  400474:       bf 00 04 00 00          mov    \PYGZdl{}0x400,\PYGZpc{}edi}
+\PYG{g+go}{  400479:       e8 d2 ff ff ff          callq  400450 \PYGZlt{}malloc@plt\PYGZgt{}}
+\PYG{g+go}{  40047e:       48 89 c7                mov    \PYGZpc{}rax,\PYGZpc{}rdi}
+\PYG{g+go}{  400481:       e8 aa ff ff ff          callq  400430 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  400486:       31 c0                   xor    \PYGZpc{}eax,\PYGZpc{}eax}
+\PYG{g+go}{  400488:       48 83 c4 08             add    \PYGZdl{}0x8,\PYGZpc{}rsp}
+\PYG{g+go}{  40048c:       c3                      retq}
+\PYG{g+go}{  40048d:       0f 1f 00                nopl   (\PYGZpc{}rax)}
+\PYG{g+go}{  (후략)}
+\end{Verbatim}

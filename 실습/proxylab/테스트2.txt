@@ -1,0 +1,264 @@
+Requesting...
+n:8192
+==2302== Thread 6:
+==2302== Invalid read of size 8
+==2302==    at 0x10A9B6: createData (proxy.c:130)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==  Address 0x8 is not stack'd, malloc'd or (recently) free'd
+==2302==
+==2302==
+==2302== Process terminating with default action of signal 11 (SIGSEGV)
+==2302==  Access not within mapped region at address 0x8
+==2302==    at 0x10A9B6: createData (proxy.c:130)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==  If you believe this happened as a result of a stack
+==2302==  overflow in your program's main thread (unlikely but
+==2302==  possible), you can try to increase the size of the
+==2302==  main thread stack using the --main-stacksize= flag.
+==2302==  The main thread stack size used in this run was 8388608.
+n:8192
+==2302==
+==2302== HEAP SUMMARY:
+==2302==     in use at exit: 114,835 bytes in 193 blocks
+==2302==   total heap usage: 449 allocs, 256 frees, 573,084 bytes allocated
+==2302==
+==2302== Thread 1:
+==2302== 20 bytes in 5 blocks are still reachable in loss record 1 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10ACF5: parseRequest (proxy.c:199)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 30 bytes in 5 blocks are still reachable in loss record 2 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10ADD4: parseRequest (proxy.c:211)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 40 bytes in 1 blocks are still reachable in loss record 3 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x4990BE3: context_alloc (resolv_context.c:133)
+==2302==    by 0x4990C8B: context_get.part.0 (resolv_context.c:181)
+==2302==    by 0x498187B: gethostbyname (getXXbyYY.c:105)
+==2302==    by 0x10B226: execRequest (proxy.c:282)
+==2302==    by 0x10A99F: createData (proxy.c:128)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 48 bytes in 2 blocks are still reachable in loss record 4 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x10B569: execRequest (proxy.c:328)
+==2302==    by 0x10A99F: createData (proxy.c:128)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 48 bytes in 2 blocks are definitely lost in loss record 5 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x10B569: execRequest (proxy.c:328)
+==2302==    by 0x10A99F: createData (proxy.c:128)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 55 bytes in 5 blocks are still reachable in loss record 6 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10ACE2: parseRequest (proxy.c:198)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 56 bytes in 2 blocks are still reachable in loss record 7 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x4991B21: update_from_conf (resolv_conf.c:522)
+==2302==    by 0x4991B21: __resolv_conf_attach (resolv_conf.c:641)
+==2302==    by 0x498FE47: __res_vinit (res_init.c:618)
+==2302==    by 0x4990D19: maybe_init (resolv_context.c:122)
+==2302==    by 0x4990D19: context_get.part.0 (resolv_context.c:184)
+==2302==    by 0x498133E: gethostbyaddr_r@@GLIBC_2.2.5 (getXXbyYY_r.c:217)
+==2302==    by 0x498A34F: gni_host_inet_name (getnameinfo.c:249)
+==2302==    by 0x498A34F: gni_host_inet (getnameinfo.c:367)
+==2302==    by 0x498A34F: gni_host (getnameinfo.c:409)
+==2302==    by 0x498A34F: getnameinfo (getnameinfo.c:523)
+==2302==    by 0x10C8D8: Getnameinfo (csapp.c:606)
+==2302==    by 0x10A7B7: main (proxy.c:77)
+==2302==
+==2302== 64 bytes in 2 blocks are still reachable in loss record 8 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x10D697: LRUCache_Hash_Put (lrucache.c:62)
+==2302==    by 0x10D5C9: LRUCache_get (lrucache.c:40)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 70 bytes in 5 blocks are still reachable in loss record 9 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10AEC2: parseRequest (proxy.c:223)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 96 bytes in 3 blocks are still reachable in loss record 10 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x10A9AD: createData (proxy.c:129)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 112 bytes in 4 blocks are still reachable in loss record 11 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x566044B: ???
+==2302==    by 0x565DBE5: ???
+==2302==    by 0x565E27F: ???
+==2302==    by 0x565E84A: ???
+==2302==    by 0x5651980: ???
+==2302==    by 0x5651C7E: ???
+==2302==    by 0x4982445: gethostbyname_r@@GLIBC_2.2.5 (getXXbyYY_r.c:315)
+==2302==    by 0x4981958: gethostbyname (getXXbyYY.c:135)
+==2302==    by 0x10B226: execRequest (proxy.c:282)
+==2302==    by 0x10A99F: createData (proxy.c:128)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==
+==2302== 168 bytes in 1 blocks are still reachable in loss record 12 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x4901320: __libc_alloc_buffer_allocate (alloc_buffer_allocate.c:26)
+==2302==    by 0x4991728: alloc_buffer_allocate (alloc_buffer.h:143)
+==2302==    by 0x4991728: __resolv_conf_allocate (resolv_conf.c:411)
+==2302==    by 0x498FAD1: __resolv_conf_load (res_init.c:592)
+==2302==    by 0x49913FA: __resolv_conf_get_current (resolv_conf.c:163)
+==2302==    by 0x498FE34: __res_vinit (res_init.c:614)
+==2302==    by 0x4990D19: maybe_init (resolv_context.c:122)
+==2302==    by 0x4990D19: context_get.part.0 (resolv_context.c:184)
+==2302==    by 0x498133E: gethostbyaddr_r@@GLIBC_2.2.5 (getXXbyYY_r.c:217)
+==2302==    by 0x498A34F: gni_host_inet_name (getnameinfo.c:249)
+==2302==    by 0x498A34F: gni_host_inet (getnameinfo.c:367)
+==2302==    by 0x498A34F: gni_host (getnameinfo.c:409)
+==2302==    by 0x498A34F: getnameinfo (getnameinfo.c:523)
+==2302==    by 0x10C8D8: Getnameinfo (csapp.c:606)
+==2302==    by 0x10A7B7: main (proxy.c:77)
+==2302==
+==2302== 224 bytes in 8 blocks are still reachable in loss record 13 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x4991B21: update_from_conf (resolv_conf.c:522)
+==2302==    by 0x4991B21: __resolv_conf_attach (resolv_conf.c:641)
+==2302==    by 0x498FE47: __res_vinit (res_init.c:618)
+==2302==    by 0x4990D19: maybe_init (resolv_context.c:122)
+==2302==    by 0x4990D19: context_get.part.0 (resolv_context.c:184)
+==2302==    by 0x498187B: gethostbyname (getXXbyYY.c:105)
+==2302==    by 0x10B226: execRequest (proxy.c:282)
+==2302==    by 0x10A99F: createData (proxy.c:128)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==
+==2302== 365 bytes in 5 blocks are still reachable in loss record 14 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10AE7A: parseRequest (proxy.c:219)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 390 bytes in 5 blocks are still reachable in loss record 15 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10ACCF: parseRequest (proxy.c:197)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 507 bytes in 47 blocks are still reachable in loss record 16 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10AD6F: parseRequest (proxy.c:207)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 1,128 bytes in 47 blocks are still reachable in loss record 17 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x10AD4B: parseRequest (proxy.c:205)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 1,360 bytes in 5 blocks are possibly lost in loss record 18 of 20
+==2302==    at 0x4838B65: calloc (vg_replace_malloc.c:762)
+==2302==    by 0x4011661: allocate_dtv (dl-tls.c:286)
+==2302==    by 0x4011FAD: _dl_allocate_tls (dl-tls.c:532)
+==2302==    by 0x485CC0E: allocate_stack (allocatestack.c:622)
+==2302==    by 0x485CC0E: pthread_create@@GLIBC_2.2.5 (pthread_create.c:662)
+==2302==    by 0x10CA4F: Pthread_create (csapp.c:669)
+==2302==    by 0x10A816: main (proxy.c:82)
+==2302==
+==2302== 3,558 bytes in 37 blocks are still reachable in loss record 19 of 20
+==2302==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==2302==    by 0x490171A: strdup (strdup.c:42)
+==2302==    by 0x10AD8D: parseRequest (proxy.c:208)
+==2302==    by 0x10AA08: doProxy (proxy.c:138)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== 106,496 bytes in 2 blocks are still reachable in loss record 20 of 20
+==2302==    at 0x4838D7B: realloc (vg_replace_malloc.c:836)
+==2302==    by 0x10B5DA: execRequest (proxy.c:337)
+==2302==    by 0x10A99F: createData (proxy.c:128)
+==2302==    by 0x10D4DC: LRUCache_get (lrucache.c:22)
+==2302==    by 0x10B110: execRequest_Cached (proxy.c:261)
+==2302==    by 0x10AA8C: doProxy (proxy.c:145)
+==2302==    by 0x10A853: proxy_thread (proxy.c:93)
+==2302==    by 0x485BF26: start_thread (pthread_create.c:479)
+==2302==    by 0x497131E: clone (clone.S:95)
+==2302==
+==2302== LEAK SUMMARY:
+==2302==    definitely lost: 48 bytes in 2 blocks
+==2302==    indirectly lost: 0 bytes in 0 blocks
+==2302==      possibly lost: 1,360 bytes in 5 blocks
+==2302==    still reachable: 113,427 bytes in 186 blocks
+==2302==         suppressed: 0 bytes in 0 blocks
+==2302==
+==2302== For lists of detected and suppressed errors, rerun with: -s
+==2302== ERROR SUMMARY: 3 errors from 3 contexts (suppressed: 0 from 0)
+Segmentation fault (core dumped)

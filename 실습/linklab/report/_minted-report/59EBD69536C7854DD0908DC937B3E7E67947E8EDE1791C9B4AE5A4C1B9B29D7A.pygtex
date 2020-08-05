@@ -1,0 +1,18 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part2\PYGZdl{} make run test5}
+\PYG{g+go}{  cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{[0001] Memory tracer started.}
+\PYG{g+go}{[0002]           (nil) : malloc( 10 ) = 0x1a75060}
+\PYG{g+go}{[0003]           (nil) : realloc( 0x1a75060 , 100 ) = 0x1a750d0}
+\PYG{g+go}{[0004]           (nil) : realloc( 0x1a750d0 , 1000 ) = 0x1a75190}
+\PYG{g+go}{[0005]           (nil) : realloc( 0x1a75190 , 10000 ) = 0x1a755d0}
+\PYG{g+go}{[0006]           (nil) : realloc( 0x1a755d0 , 100000 ) = 0x1a755d0}
+\PYG{g+go}{[0007]           (nil) : free( 0x1a755d0 )}
+\PYG{g+go}{[0008]}
+\PYG{g+go}{[0009] Statistics}
+\PYG{g+go}{[0010]   allocated\PYGZus{}total      111110}
+\PYG{g+go}{[0011]   allocated\PYGZus{}avg        22222}
+\PYG{g+go}{[0012]   freed\PYGZus{}total          111110}
+\PYG{g+go}{[0013]}
+\PYG{g+go}{[0014] Memory tracer stopped.}
+\end{Verbatim}

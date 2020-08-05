@@ -1,0 +1,545 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdio.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}string.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}csapp.h\PYGZdq{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}lrucache.h\PYGZdq{}}
+
+\PYG{c+cm}{/* You won\PYGZsq{}t lose style points for including this long line in your code */}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{user\PYGZus{}agent\PYGZus{}hdr} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}Mozilla/5.0 (X11; Linux x86\PYGZus{}64; rv:10.0.3) Gecko/20120305 Firefox/10.0.3\PYGZdq{}}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{connection\PYGZus{}close\PYGZus{}hdr} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}close\PYGZdq{}}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{proxy\PYGZus{}connection\PYGZus{}close\PYGZus{}hdr} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}close\PYGZdq{}}\PYG{p}{;}
+
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{connection} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}Connection\PYGZdq{}}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{proxy\PYGZus{}connection} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}Proxy\PYGZhy{}Connection\PYGZdq{}}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{user\PYGZus{}agent} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}User\PYGZhy{}Agent\PYGZdq{}}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{host} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}Host\PYGZdq{}}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{contentLengthField} \PYG{o}{=} \PYG{l+s}{\PYGZdq{}Content\PYGZhy{}Length\PYGZdq{}}\PYG{p}{;}
+
+\PYG{k}{static} \PYG{k}{struct} \PYG{n}{LRUCache} \PYG{n}{cache}\PYG{p}{;}
+
+\PYG{k}{struct} \PYG{n}{httpParam} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{field}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{value}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*} \PYG{n}{next}\PYG{p}{;}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{httpVersion}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{method}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{host}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{has\PYGZus{}user\PYGZus{}agent}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{has\PYGZus{}connection}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{has\PYGZus{}proxy\PYGZus{}connection}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{has\PYGZus{}host}\PYG{p}{;}
+    \PYG{k+kt}{ssize\PYGZus{}t} \PYG{n}{content\PYGZus{}length}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{content}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*} \PYG{n}{params}\PYG{p}{;}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{struct} \PYG{n}{response} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{data}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{length}\PYG{p}{;}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{extern} \PYG{n}{sem\PYGZus{}t} \PYG{n}{semaphore}\PYG{p}{;}
+
+\PYG{k+kt}{int} \PYG{n+nf}{doProxy}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{fd}\PYG{p}{);}
+\PYG{k+kt}{char} \PYG{o}{*}\PYG{n+nf}{trimwhitespace}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{str}\PYG{p}{);}
+\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{n+nf}{parseRequest}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{fd}\PYG{p}{);}
+\PYG{k}{struct} \PYG{n}{response} \PYG{n+nf}{execRequest}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{parsed}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{freeParsedRequest}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{request}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{replyRequest}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{fd}\PYG{p}{,} \PYG{k}{struct} \PYG{n}{response} \PYG{o}{*} \PYG{n}{result}\PYG{p}{);}
+\PYG{k+kt}{char} \PYG{o}{*} \PYG{n+nf}{getHostFromURI}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{);}
+\PYG{k+kt}{int} \PYG{n+nf}{guessPortFromURI}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{o}{*} \PYG{n+nf}{proxy\PYGZus{}thread}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{vargp}\PYG{p}{);}
+\PYG{k}{struct} \PYG{n}{response} \PYG{n+nf}{execRequest\PYGZus{}Cached}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{parsed}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{initSignal}\PYG{p}{();}
+\PYG{k+kt}{char} \PYG{o}{*} \PYG{n+nf}{makeRelativeURI}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{);}
+
+\PYG{k+kt}{int} \PYG{n+nf}{main}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{argc}\PYG{p}{,} \PYG{k+kt}{char}\PYG{o}{**} \PYG{n}{argv}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{n}{hostname}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}
+    \PYG{k+kt}{char} \PYG{n}{clientPort}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{argc} \PYG{o}{!=} \PYG{l+m+mi}{2}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stderr}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}Usage: \PYGZpc{}s \PYGZlt{}port\PYGZgt{}}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]);}
+        \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{k+kt}{int} \PYG{n}{portNumber} \PYG{o}{=} \PYG{n}{atoi}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Runnion on \PYGZpc{}d port}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{portNumber}\PYG{p}{);}
+    \PYG{k+kt}{int} \PYG{n}{listenSocket}\PYG{p}{;} \PYG{c+c1}{// = Socket(AF\PYGZus{}INET, SOCK\PYGZus{}STREAM, 0);}
+    \PYG{k}{struct} \PYG{n}{sockaddr\PYGZus{}in} \PYG{n}{clientAddr}\PYG{p}{;}
+    \PYG{n}{listenSocket} \PYG{o}{=} \PYG{n}{Open\PYGZus{}listenfd}\PYG{p}{(}\PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]);}
+    \PYG{n}{initCache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cache}\PYG{p}{);}
+    \PYG{n}{initSignal}\PYG{p}{();}
+    \PYG{n}{pthread\PYGZus{}t} \PYG{n}{tid}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{const} \PYG{k+kt}{int} \PYG{n}{clientlen} \PYG{o}{=} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{clientAddr}\PYG{p}{);}
+        \PYG{k+kt}{int} \PYG{n}{connfd} \PYG{o}{=} \PYG{n}{Accept}\PYG{p}{(}\PYG{n}{listenSocket}\PYG{p}{,} \PYG{p}{(}\PYG{n}{SA} \PYG{o}{*}\PYG{p}{)} \PYG{o}{\PYGZam{}}\PYG{n}{clientAddr}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{clientlen}\PYG{p}{);}
+        \PYG{n}{Getnameinfo}\PYG{p}{((}\PYG{n}{SA} \PYG{o}{*}\PYG{p}{)} \PYG{o}{\PYGZam{}}\PYG{n}{clientAddr}\PYG{p}{,} \PYG{n}{clientlen}\PYG{p}{,} \PYG{n}{hostname}\PYG{p}{,} \PYG{n}{MAXLINE}\PYG{p}{,} \PYG{n}{clientPort}\PYG{p}{,} \PYG{n}{MAXLINE}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Accepted connection from (\PYGZpc{}s, \PYGZpc{}s)}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{hostname}\PYG{p}{,} \PYG{n}{clientPort}\PYG{p}{);}
+        \PYG{c+c1}{// hp = gethostbyaddr((const char *)\PYGZam{}clientAddr.sin\PYGZus{}addr.s\PYGZus{}addr,sizeof(clientAddr.sin\PYGZus{}addr.s\PYGZus{}addr), AF\PYGZus{}INET);}
+        \PYG{k+kt}{int} \PYG{o}{*}\PYG{n}{connfdp} \PYG{o}{=} \PYG{n}{malloc}\PYG{p}{(}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k+kt}{int}\PYG{p}{));}
+        \PYG{o}{*}\PYG{n}{connfdp} \PYG{o}{=} \PYG{n}{connfd}\PYG{p}{;}
+        \PYG{n}{Pthread\PYGZus{}create}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{tid}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{n}{proxy\PYGZus{}thread}\PYG{p}{,} \PYG{n}{connfdp}\PYG{p}{);}
+        \PYG{c+c1}{// Close(connfd);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{freeCache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cache}\PYG{p}{);}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{o}{*} \PYG{n+nf}{proxy\PYGZus{}thread}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{vargp}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{connfd} \PYG{o}{=} \PYG{o}{*}\PYG{p}{((}\PYG{k+kt}{int} \PYG{o}{*}\PYG{p}{)}\PYG{n}{vargp}\PYG{p}{);}
+    \PYG{n}{Pthread\PYGZus{}detach}\PYG{p}{(}\PYG{n}{pthread\PYGZus{}self}\PYG{p}{());}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{vargp}\PYG{p}{);}
+    \PYG{n}{doProxy}\PYG{p}{(}\PYG{n}{connfd}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}DoProxy done}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{Close}\PYG{p}{(}\PYG{n}{connfd}\PYG{p}{);}
+    \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{struct} \PYG{n}{sigaction} \PYG{n}{old\PYGZus{}action}\PYG{p}{;}
+
+\PYG{k+kt}{void} \PYG{n+nf}{ctrlC\PYGZus{}handler}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{sig\PYGZus{}no}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{freeCache}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cache}\PYG{p}{);}
+    \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{n+nf}{initSignal}\PYG{p}{()} \PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{sigaction} \PYG{n}{action}\PYG{p}{;}
+    \PYG{n}{memset}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{action}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{action}\PYG{p}{));}
+    \PYG{n}{action}\PYG{p}{.}\PYG{n}{sa\PYGZus{}handler} \PYG{o}{=} \PYG{o}{\PYGZam{}}\PYG{n}{ctrlC\PYGZus{}handler}\PYG{p}{;}
+    \PYG{n}{sigaction}\PYG{p}{(}\PYG{n}{SIGINT}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{action}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{old\PYGZus{}action}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n+nf}{createData}\PYG{p}{(}\PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{,} \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{metadata}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}CreateData called}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{request} \PYG{o}{=} \PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{p}{)} \PYG{n}{metadata}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{response} \PYG{n}{response} \PYG{o}{=}  \PYG{n}{execRequest}\PYG{p}{(}\PYG{n}{request}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{node} \PYG{o}{=} \PYG{n}{malloc}\PYG{p}{(}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUNode}\PYG{p}{));}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{response}\PYG{p}{.}\PYG{n}{length} \PYG{o}{==} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Warning: response is NULL\PYGZdq{}}\PYG{p}{);}
+        \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+        \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{size} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data} \PYG{o}{=} \PYG{n}{response}\PYG{p}{.}\PYG{n}{data}\PYG{p}{;}
+        \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{size} \PYG{o}{=} \PYG{n}{response}\PYG{p}{.}\PYG{n}{length}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k}{return} \PYG{n}{node}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{int} \PYG{n+nf}{doProxy}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{fd}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{n}{parsed} \PYG{o}{=} \PYG{n}{parseRequest}\PYG{p}{(}\PYG{n}{fd}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Parse request done}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{parsed}\PYG{p}{.}\PYG{n}{method} \PYG{o}{||} \PYG{p}{(}\PYG{n}{strncmp}\PYG{p}{(}\PYG{n}{parsed}\PYG{p}{.}\PYG{n}{method}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}GET\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{3}\PYG{p}{)}\PYG{o}{!=}\PYG{l+m+mi}{0} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{strncmp}\PYG{p}{(}\PYG{n}{parsed}\PYG{p}{.}\PYG{n}{method}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}POST\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{4}\PYG{p}{)}\PYG{o}{!=}\PYG{l+m+mi}{0}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}[PROXY] ============ Ignoring method \PYGZpc{}s ============}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{parsed}\PYG{p}{.}\PYG{n}{method}\PYG{p}{);}
+        \PYG{n}{freeParsedRequest}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{parsed}\PYG{p}{);}
+        \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{struct} \PYG{n}{response} \PYG{n}{result} \PYG{o}{=} \PYG{n}{execRequest\PYGZus{}Cached}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{parsed}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}execRequest done}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{replyRequest}\PYG{p}{(}\PYG{n}{fd}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{result}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}replyRequest done}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{n}{freeParsedRequest}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{parsed}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}doProxy about to return}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{n+nf}{parseRequest}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{fd}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{n}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{n}{buf}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}
+    \PYG{k+kt}{char} \PYG{n}{originalBuf}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}
+    \PYG{n}{rio\PYGZus{}t} \PYG{n}{rio}\PYG{p}{;}
+    \PYG{n}{Rio\PYGZus{}readinitb}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{rio}\PYG{p}{,} \PYG{n}{fd}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{n}{result}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{params} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{content\PYGZus{}length} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{uri} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{method} \PYG{o}{=}  \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{httpVersion} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{host} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{content} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}host} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}proxy\PYGZus{}connection} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}connection} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}user\PYGZus{}agent} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{content\PYGZus{}length} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+
+    \PYG{k}{while}\PYG{p}{((}\PYG{n}{n} \PYG{o}{=} \PYG{n}{Rio\PYGZus{}readlineb}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{rio}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{MAXLINE}\PYG{p}{))} \PYG{o}{!=} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{c+c1}{//}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}line: \PYGZpc{}s\PYGZdq{}}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{);}
+        \PYG{n}{strncpy}\PYG{p}{(}\PYG{n}{originalBuf}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{MAXLINE}\PYG{p}{);}
+        \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{saveptr}\PYG{p}{;}
+        \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{first} \PYG{o}{=} \PYG{n}{strtok\PYGZus{}r}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{} \PYGZdq{}}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{saveptr}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{first}\PYG{p}{)}
+            \PYG{k}{continue}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{strncmp}\PYG{p}{(}\PYG{n}{first}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{2}\PYG{p}{)}\PYG{o}{==}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Last buf: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{originalBuf}\PYG{p}{);}
+            \PYG{k}{break}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{if}\PYG{p}{((}\PYG{n}{strcasecmp}\PYG{p}{(}\PYG{n}{first}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}GET\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{o}{||} \PYG{p}{(}\PYG{n}{strcasecmp}\PYG{p}{(}\PYG{n}{first}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}POST\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+            \PYG{c+c1}{// GET or POST}
+            \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri} \PYG{o}{=} \PYG{n}{strtok\PYGZus{}r}\PYG{p}{(}\PYG{n+nb}{NULL}\PYG{p}{,} \PYG{l+s}{\PYGZdq{} \PYGZdq{}}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{saveptr}\PYG{p}{);}
+            \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{httpVersion} \PYG{o}{=} \PYG{n}{strtok\PYGZus{}r}\PYG{p}{(}\PYG{n+nb}{NULL}\PYG{p}{,} \PYG{l+s}{\PYGZdq{} \PYGZdq{}}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{saveptr}\PYG{p}{);}
+            \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{method} \PYG{o}{=} \PYG{n}{first}\PYG{p}{;}
+            \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}uri: \PYGZpc{}s, version: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{uri}\PYG{p}{,} \PYG{n}{httpVersion}\PYG{p}{);}
+            \PYG{n}{result}\PYG{p}{.}\PYG{n}{uri} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{uri}\PYG{p}{);}
+            \PYG{n}{result}\PYG{p}{.}\PYG{n}{httpVersion} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{httpVersion}\PYG{p}{);}
+            \PYG{n}{result}\PYG{p}{.}\PYG{n}{method} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{method}\PYG{p}{);}
+            \PYG{k}{continue}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+            \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{field} \PYG{o}{=} \PYG{n}{strtok\PYGZus{}r}\PYG{p}{(}\PYG{n}{originalBuf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}:\PYGZdq{}}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{saveptr}\PYG{p}{);}
+            \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{value} \PYG{o}{=} \PYG{n}{strtok\PYGZus{}r}\PYG{p}{(}\PYG{n+nb}{NULL}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}:\PYGZdq{}}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{saveptr}\PYG{p}{);}
+            \PYG{c+c1}{// printf(\PYGZdq{}Field: \PYGZpc{}s, value: \PYGZpc{}s\PYGZbs{}n\PYGZdq{}, field, value);}
+            \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*}\PYG{n}{param} \PYG{o}{=} \PYG{n}{malloc}\PYG{p}{(}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{httpParam}\PYG{p}{));}
+            \PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{next} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+            \PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{trimwhitespace}\PYG{p}{(}\PYG{n}{field}\PYG{p}{));}
+            \PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{trimwhitespace}\PYG{p}{(}\PYG{n}{value}\PYG{p}{));}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{,} \PYG{n}{connection}\PYG{p}{)}\PYG{o}{==}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{free}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+                \PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{connection\PYGZus{}close\PYGZus{}hdr}\PYG{p}{);}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}connection} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{,} \PYG{n}{proxy\PYGZus{}connection}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{free}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+                \PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{proxy\PYGZus{}connection\PYGZus{}close\PYGZus{}hdr}\PYG{p}{);}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}proxy\PYGZus{}connection} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{,} \PYG{n}{user\PYGZus{}agent}\PYG{p}{)}\PYG{o}{==}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{free}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+                \PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{user\PYGZus{}agent\PYGZus{}hdr}\PYG{p}{);}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}user\PYGZus{}agent} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{,} \PYG{n}{host}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}host} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{host} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{,} \PYG{n}{contentLengthField}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{content\PYGZus{}length} \PYG{o}{=} \PYG{n}{atoi}\PYG{p}{(}\PYG{n}{param}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{param}\PYG{p}{;}
+                \PYG{n}{result}\PYG{p}{.}\PYG{n}{params} \PYG{o}{=} \PYG{n}{iterator}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n}{param}\PYG{p}{;}
+                \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{param}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{k}{continue}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{result}\PYG{p}{.}\PYG{n}{content\PYGZus{}length} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Content length: \PYGZpc{}ld}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{result}\PYG{p}{.}\PYG{n}{content\PYGZus{}length}\PYG{p}{);}
+        \PYG{k+kt}{int} \PYG{n}{n} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+        \PYG{k+kt}{int} \PYG{n}{totalN} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+        \PYG{n}{result}\PYG{p}{.}\PYG{n}{content} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+        \PYG{k}{while}\PYG{p}{((}\PYG{n}{n}\PYG{o}{=}\PYG{n}{Rio\PYGZus{}readnb}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{rio}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{MAXLINE} \PYG{o}{\PYGZgt{}} \PYG{n}{result}\PYG{p}{.}\PYG{n}{content\PYGZus{}length} \PYG{o}{?} \PYG{n}{result}\PYG{p}{.}\PYG{n+nl}{content\PYGZus{}length}\PYG{p}{:} \PYG{n}{MAXLINE}\PYG{p}{))}\PYG{o}{\PYGZgt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{c+c1}{// printf(\PYGZdq{}something\PYGZdq{});}
+            \PYG{c+c1}{// printf(\PYGZdq{}n:\PYGZpc{}d\PYGZbs{}n\PYGZdq{}, n);}
+            \PYG{n}{totalN} \PYG{o}{+=} \PYG{n}{n}\PYG{p}{;}
+            \PYG{n}{result}\PYG{p}{.}\PYG{n}{content} \PYG{o}{=} \PYG{n}{realloc}\PYG{p}{(}\PYG{n}{result}\PYG{p}{.}\PYG{n}{content}\PYG{p}{,} \PYG{n}{totalN}\PYG{p}{);}
+            \PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{result}\PYG{p}{.}\PYG{n}{content} \PYG{o}{+} \PYG{n}{totalN} \PYG{o}{\PYGZhy{}} \PYG{n}{n}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{n}\PYG{p}{);}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{totalN} \PYG{o}{==} \PYG{n}{result}\PYG{p}{.}\PYG{n}{content\PYGZus{}length}\PYG{p}{)}
+                \PYG{k}{break}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{c+c1}{// result.content\PYGZus{}length = totalN;}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Wrote content of size \PYGZpc{}d}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{totalN}\PYG{p}{);}
+
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{result}\PYG{p}{.}\PYG{n}{has\PYGZus{}host}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{result}\PYG{p}{.}\PYG{n}{host} \PYG{o}{=} \PYG{n}{getHostFromURI}\PYG{p}{(}\PYG{n}{result}\PYG{p}{.}\PYG{n}{uri}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{n}{result}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{struct} \PYG{n}{response} \PYG{n+nf}{execRequest\PYGZus{}Cached}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{parsed}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}execRequest\PYGZus{}Cached called\PYGZdq{}}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{node} \PYG{o}{=} \PYG{n}{LRUCache\PYGZus{}get}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cache}\PYG{p}{,} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{uri}\PYG{p}{,} \PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*} \PYG{p}{)} \PYG{n}{parsed}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{response} \PYG{n}{response}\PYG{p}{;} \PYG{c+c1}{// = malloc(sizeof(struct response));}
+    \PYG{n}{response}\PYG{p}{.}\PYG{n}{data} \PYG{o}{=} \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data}\PYG{p}{;}
+    \PYG{n}{response}\PYG{p}{.}\PYG{n}{length} \PYG{o}{=} \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{size}\PYG{p}{;}
+    \PYG{n}{response}\PYG{p}{.}\PYG{n}{uri} \PYG{o}{=} \PYG{n}{parsed} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{uri}\PYG{p}{;}
+    \PYG{k}{return} \PYG{n}{response}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{struct} \PYG{n}{response} \PYG{n+nf}{execRequest}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{parsed}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{response} \PYG{n}{responseData}\PYG{p}{;} \PYG{c+c1}{// = malloc(sizeof(struct response));}
+    \PYG{n}{responseData}\PYG{p}{.}\PYG{n}{data} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{responseData}\PYG{p}{.}\PYG{n}{length} \PYG{o}{=} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+    \PYG{n}{rio\PYGZus{}t} \PYG{n}{rio}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{hostname} \PYG{o}{=} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{host}\PYG{p}{;}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Hostname: \PYGZpc{}s has\PYGZus{}host: \PYGZpc{}d host: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{hostname}\PYG{p}{,} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{has\PYGZus{}host}\PYG{p}{,} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{host}\PYG{p}{);}
+    \PYG{k+kt}{char} \PYG{n}{buf}\PYG{p}{[}\PYG{n}{MAXLINE}\PYG{p}{];}
+    \PYG{k+kt}{int} \PYG{n}{port} \PYG{o}{=} \PYG{n}{guessPortFromURI}\PYG{p}{(}\PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{uri}\PYG{p}{);}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Port: \PYGZpc{}d}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{port}\PYG{p}{);}
+    \PYG{k+kt}{int} \PYG{n}{clientfd}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{hostent} \PYG{o}{*}  \PYG{n}{hp}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{sockaddr\PYGZus{}in} \PYG{n}{serveraddr}\PYG{p}{;}
+    \PYG{k}{if} \PYG{p}{((}\PYG{n}{clientfd} \PYG{o}{=} \PYG{n}{socket}\PYG{p}{(}\PYG{n}{AF\PYGZus{}INET}\PYG{p}{,} \PYG{n}{SOCK\PYGZus{}STREAM}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{))} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)}
+        \PYG{k}{return} \PYG{n}{responseData}\PYG{p}{;}
+    \PYG{k}{if} \PYG{p}{((}\PYG{n}{hp} \PYG{o}{=} \PYG{n}{gethostbyname}\PYG{p}{(}\PYG{n}{hostname}\PYG{p}{))} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)}
+        \PYG{k}{return} \PYG{n}{responseData}\PYG{p}{;}
+    \PYG{n}{bzero}\PYG{p}{((}\PYG{k+kt}{char} \PYG{o}{*}\PYG{p}{)} \PYG{o}{\PYGZam{}}\PYG{n}{serveraddr}\PYG{p}{,} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{serveraddr}\PYG{p}{));}
+    \PYG{n}{serveraddr}\PYG{p}{.}\PYG{n}{sin\PYGZus{}family} \PYG{o}{=} \PYG{n}{AF\PYGZus{}INET}\PYG{p}{;}
+    \PYG{n}{bcopy}\PYG{p}{((}\PYG{k+kt}{char} \PYG{o}{*}\PYG{p}{)}\PYG{n}{hp}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{h\PYGZus{}addr\PYGZus{}list}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{p}{)}\PYG{o}{\PYGZam{}}\PYG{n}{serveraddr}\PYG{p}{.}\PYG{n}{sin\PYGZus{}addr}\PYG{p}{.}\PYG{n}{s\PYGZus{}addr}\PYG{p}{,} \PYG{n}{hp}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{h\PYGZus{}length}\PYG{p}{);}
+    \PYG{n}{serveraddr}\PYG{p}{.}\PYG{n}{sin\PYGZus{}port} \PYG{o}{=} \PYG{n}{htons}\PYG{p}{(}\PYG{n}{port}\PYG{p}{);}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{connect}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{p}{(}\PYG{n}{SA} \PYG{o}{*}\PYG{p}{)} \PYG{o}{\PYGZam{}}\PYG{n}{serveraddr}\PYG{p}{,} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{serveraddr}\PYG{p}{))} \PYG{o}{\PYGZlt{}} \PYG{l+m+mi}{0}\PYG{p}{)}
+        \PYG{k}{return} \PYG{n}{responseData}\PYG{p}{;}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Requesting...}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{relativeURI} \PYG{o}{=} \PYG{n}{makeRelativeURI}\PYG{p}{(}\PYG{n}{parsed} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{uri}\PYG{p}{);}
+    \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s \PYGZpc{}s HTTP/1.0}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{parsed} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{method}\PYG{p}{,}  \PYG{n}{relativeURI}\PYG{p}{);}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{relativeURI}\PYG{p}{);}
+    \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{));}
+    \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s\PYGZdq{}, buf);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{has\PYGZus{}host}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}Host: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{hostname}\PYG{p}{);}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{));}
+        \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s\PYGZdq{}, buf);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{has\PYGZus{}user\PYGZus{}agent}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{user\PYGZus{}agent}\PYG{p}{,} \PYG{n}{user\PYGZus{}agent\PYGZus{}hdr}\PYG{p}{);}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{));}
+        \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s\PYGZdq{}, buf);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{has\PYGZus{}connection}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{connection}\PYG{p}{,} \PYG{n}{connection\PYGZus{}close\PYGZus{}hdr}\PYG{p}{);}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{));}
+        \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s\PYGZdq{}, buf);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{has\PYGZus{}proxy\PYGZus{}connection}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{proxy\PYGZus{}connection}\PYG{p}{,} \PYG{n}{proxy\PYGZus{}connection\PYGZus{}close\PYGZus{}hdr}\PYG{p}{);}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{));}
+        \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s manually\PYGZdq{}, buf);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{params}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{sprintf}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s: \PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{iterator}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{,} \PYG{n}{iterator}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{));}
+        \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s\PYGZdq{}, buf);}
+        \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{strlen}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}r\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{));}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{content\PYGZus{}length} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{,} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{content}\PYG{p}{,} \PYG{n}{parsed}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{content\PYGZus{}length}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{c+c1}{// printf(\PYGZdq{}Wrote \PYGZpc{}s\PYGZdq{}, buf);}
+    \PYG{k+kt}{ssize\PYGZus{}t} \PYG{n}{n} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{totalN} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Reading}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+
+    \PYG{n}{Rio\PYGZus{}readinitb}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{rio}\PYG{p}{,} \PYG{n}{clientfd}\PYG{p}{);}
+    \PYG{k}{while}\PYG{p}{((}\PYG{n}{n}\PYG{o}{=}\PYG{n}{Rio\PYGZus{}readnb}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{rio}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{MAXLINE}\PYG{p}{))}\PYG{o}{\PYGZgt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{c+c1}{// printf(\PYGZdq{}something\PYGZdq{});}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}n:\PYGZpc{}ld}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{n}\PYG{p}{);}
+        \PYG{n}{totalN} \PYG{o}{+=} \PYG{n}{n}\PYG{p}{;}
+        \PYG{n}{responseData}\PYG{p}{.}\PYG{n}{data} \PYG{o}{=} \PYG{n}{realloc}\PYG{p}{(}\PYG{n}{responseData}\PYG{p}{.}\PYG{n}{data}\PYG{p}{,} \PYG{n}{totalN}\PYG{p}{);}
+        \PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{responseData}\PYG{p}{.}\PYG{n}{data} \PYG{o}{+} \PYG{n}{totalN} \PYG{o}{\PYGZhy{}} \PYG{n}{n}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{n}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{responseData}\PYG{p}{.}\PYG{n}{length} \PYG{o}{=} \PYG{n}{totalN}\PYG{p}{;}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}total N: \PYGZpc{}d}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{totalN}\PYG{p}{);}
+    \PYG{n}{Close}\PYG{p}{(}\PYG{n}{clientfd}\PYG{p}{);}
+    \PYG{k}{return} \PYG{n}{responseData}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{freeParsedRequest}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{parsedRequest} \PYG{o}{*} \PYG{n}{request}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{request}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{uri}\PYG{p}{);}
+    \PYG{n}{request} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{uri} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{request}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{httpVersion}\PYG{p}{);}
+    \PYG{n}{request} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{httpVersion} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{request}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{method}\PYG{p}{);}
+    \PYG{n}{request} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{method} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{request}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{params}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{field}\PYG{p}{);}
+        \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{value}\PYG{p}{);}
+        \PYG{k}{struct} \PYG{n}{httpParam} \PYG{o}{*} \PYG{n}{current} \PYG{o}{=} \PYG{n}{iterator}\PYG{p}{;}
+        \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{iterator}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{next}\PYG{p}{;}
+        \PYG{n}{free}\PYG{p}{(}\PYG{n}{current}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{request}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{params} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{request}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{host}\PYG{p}{);}
+    \PYG{n}{request} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{host} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{free}\PYG{p}{(}\PYG{n}{request} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{content}\PYG{p}{);}
+    \PYG{n}{request} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{content} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{n+nf}{replyRequest}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{fd}\PYG{p}{,} \PYG{k}{struct} \PYG{n}{response} \PYG{o}{*} \PYG{n}{result}\PYG{p}{)} \PYG{p}{\PYGZob{}} 
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{result}\PYG{p}{)}
+        \PYG{n}{Rio\PYGZus{}writen}\PYG{p}{(}\PYG{n}{fd}\PYG{p}{,} \PYG{n}{result}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{data}\PYG{p}{,} \PYG{n}{result}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{length}\PYG{p}{);}
+    \PYG{k}{else}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Warning: result is null}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{char} \PYG{o}{*} \PYG{n+nf}{getHostFromURI}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{// ://부터 :이나 / 전까지 뽑아낸다}
+    \PYG{k+kt}{int} \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{start}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{len} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{switch}\PYG{p}{(}\PYG{n}{state}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k}{case} \PYG{l+m+mi}{0}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}:\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{1}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{2}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                    \PYG{n}{start} \PYG{o}{=} \PYG{n}{uri} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{3}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{len}\PYG{o}{++}\PYG{p}{;}
+                    \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{3}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{4}\PYG{o}{:}
+                \PYG{k}{break}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{uri}\PYG{o}{++}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{result} \PYG{o}{=} \PYG{n}{malloc}\PYG{p}{(}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k+kt}{char}\PYG{p}{)} \PYG{o}{*} \PYG{p}{(}\PYG{n}{len} \PYG{o}{+} \PYG{l+m+mi}{1}\PYG{p}{));}
+    \PYG{n}{result}\PYG{p}{[}\PYG{n}{len}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+    \PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{result}\PYG{p}{,} \PYG{n}{start}\PYG{p}{,} \PYG{n}{len}\PYG{p}{);}
+    \PYG{k}{return} \PYG{n}{result}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{char} \PYG{o}{*}\PYG{n+nf}{makeRelativeURI}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{return} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{uri}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{strstr}\PYG{p}{(}\PYG{n}{uri}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}://\PYGZdq{}}\PYG{p}{)} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{int} \PYG{n}{len} \PYG{o}{=} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{uri}\PYG{p}{);}
+        \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{result} \PYG{o}{=} \PYG{n}{malloc}\PYG{p}{(}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k+kt}{char}\PYG{p}{)} \PYG{o}{*} \PYG{p}{(}\PYG{n}{len} \PYG{o}{+} \PYG{l+m+mi}{2}\PYG{p}{));}
+        \PYG{n}{result}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{;}
+        \PYG{n}{strcpy}\PYG{p}{(}\PYG{n}{result}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{n}{uri}\PYG{p}{);}
+        \PYG{n}{result}\PYG{p}{[}\PYG{n}{len}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+        \PYG{k}{return} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{uri}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k+kt}{int} \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{pathStart} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{char} \PYG{n}{ch} \PYG{o}{=} \PYG{o}{*}\PYG{n}{uri}\PYG{p}{;}
+        \PYG{k}{switch}\PYG{p}{(}\PYG{n}{state}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k}{case} \PYG{l+m+mi}{0}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{n}{ch} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}:\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{1}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{n}{ch} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{2}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{n}{ch} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+            \PYG{k}{case} \PYG{l+m+mi}{3}\PYG{o}{:}
+                \PYG{k}{if}\PYG{p}{(}\PYG{n}{ch} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{n}{state}\PYG{o}{++}\PYG{p}{;}
+                    \PYG{n}{pathStart} \PYG{o}{=} \PYG{n}{uri}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{k}{break}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{uri}\PYG{o}{++}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{state} \PYG{o}{==} \PYG{l+m+mi}{4}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{return} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{pathStart}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{n}{strdup}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}/\PYGZdq{}}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{int} \PYG{n+nf}{guessPortFromURI}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{uri}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{uri} \PYG{o}{==} \PYG{n+nb}{NULL}\PYG{p}{)}
+        \PYG{k}{return} \PYG{l+m+mi}{80}\PYG{p}{;}
+    \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}GuessPortFromURI uri:\PYGZpc{}s}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{uri}\PYG{p}{);}
+    \PYG{k+kt}{int} \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*}  \PYG{n}{portStart} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{port} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k+kt}{char} \PYG{n}{ch} \PYG{o}{=} \PYG{o}{*}\PYG{n}{uri}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{uri} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}:\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+            \PYG{n}{portStart} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{isdigit}\PYG{p}{(}\PYG{n}{ch}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{state} \PYG{o}{==} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{portStart} \PYG{o}{=} \PYG{n}{uri}\PYG{p}{;}
+                \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{2}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{state} \PYG{o}{==} \PYG{l+m+mi}{2}\PYG{p}{)\PYGZob{}}
+
+            \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+            \PYG{p}{\PYGZcb{}}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{ch} \PYG{o}{==} \PYG{l+s+sc}{\PYGZsq{}/\PYGZsq{}}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{state} \PYG{o}{==} \PYG{l+m+mi}{2}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{c+c1}{// portEnd =  uri\PYGZhy{}1;}
+                \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{3}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}}\PYG{k}{else} \PYG{p}{\PYGZob{}}
+                \PYG{n}{portStart} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+                \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+            \PYG{n}{portStart} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+            \PYG{n}{state} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{state} \PYG{o}{==} \PYG{l+m+mi}{3}\PYG{p}{)}
+            \PYG{k}{break}\PYG{p}{;}
+        \PYG{n}{uri}\PYG{o}{++}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{portStart}\PYG{p}{)}
+        \PYG{n}{port} \PYG{o}{=} \PYG{n}{atoi}\PYG{p}{(}\PYG{n}{portStart}\PYG{p}{);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{port} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)}
+        \PYG{n}{port} \PYG{o}{=} \PYG{l+m+mi}{80}\PYG{p}{;}
+    \PYG{k}{return} \PYG{n}{port}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// https://stackoverflow.com/a/122721/8614565}
+\PYG{c+c1}{// Note: This function returns a pointer to a substring of the original string.}
+\PYG{c+c1}{// // If the given string was allocated dynamically, the caller must not overwrite}
+\PYG{c+c1}{// // that pointer with the returned value, since the original pointer must be}
+\PYG{c+c1}{// // deallocated using the same allocator with which it was allocated.  The return}
+\PYG{c+c1}{// // value must NOT be deallocated using free() etc.}
+\PYG{k+kt}{char} \PYG{o}{*}\PYG{n+nf}{trimwhitespace}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{str}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{end}\PYG{p}{;}
+
+    \PYG{c+c1}{// Trim leading space}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{isspace}\PYG{p}{((}\PYG{k+kt}{unsigned} \PYG{k+kt}{char}\PYG{p}{)}\PYG{o}{*}\PYG{n}{str}\PYG{p}{))} \PYG{n}{str}\PYG{o}{++}\PYG{p}{;}
+
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{*}\PYG{n}{str} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{c+c1}{// All spaces?}
+        \PYG{k}{return} \PYG{n}{str}\PYG{p}{;}
+
+    \PYG{c+c1}{// Trim trailing space}
+    \PYG{n}{end} \PYG{o}{=} \PYG{n}{str} \PYG{o}{+} \PYG{n}{strlen}\PYG{p}{(}\PYG{n}{str}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{1}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{end} \PYG{o}{\PYGZgt{}} \PYG{n}{str} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{isspace}\PYG{p}{((}\PYG{k+kt}{unsigned} \PYG{k+kt}{char}\PYG{p}{)}\PYG{o}{*}\PYG{n}{end}\PYG{p}{))} \PYG{n}{end}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{p}{;}
+
+    \PYG{c+c1}{// Write new null terminator character}
+    \PYG{n}{end}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+
+    \PYG{k}{return} \PYG{n}{str}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

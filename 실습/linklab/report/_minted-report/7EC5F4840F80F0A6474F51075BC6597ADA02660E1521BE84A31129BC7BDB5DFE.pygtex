@@ -1,0 +1,33 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdarg.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdio.h\PYGZgt{}}
+
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}callinfo.h\PYGZdq{}}
+
+\PYG{k+kt}{int} \PYG{n+nf}{mlog}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{pc}\PYG{p}{,} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{fmt}\PYG{p}{,} \PYG{p}{...)}
+\PYG{p}{\PYGZob{}}
+  \PYG{k}{static} \PYG{k+kt}{unsigned} \PYG{k+kt}{int} \PYG{n}{id} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{k+kt}{va\PYGZus{}list} \PYG{n}{ap}\PYG{p}{;}
+  \PYG{k+kt}{int} \PYG{n}{res}\PYG{p}{;}
+
+  \PYG{n}{res} \PYG{o}{=} \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stderr}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}[\PYGZpc{}04u] \PYGZdq{}}\PYG{p}{,} \PYG{n}{id}\PYG{o}{++}\PYG{p}{);}
+
+  \PYG{k}{if} \PYG{p}{(}\PYG{n}{pc}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{char} \PYG{n}{buf}\PYG{p}{[}\PYG{l+m+mi}{16}\PYG{p}{];}
+    \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{k+kt}{long} \PYG{n}{ofs}\PYG{p}{;}
+    \PYG{k}{if} \PYG{p}{(}\PYG{n}{get\PYGZus{}callinfo}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{buf}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{buf}\PYG{p}{),} \PYG{o}{\PYGZam{}}\PYG{n}{ofs}\PYG{p}{)} \PYG{o}{!=} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+      \PYG{n}{res} \PYG{o}{+=} \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stderr}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}12s:\PYGZpc{}\PYGZhy{}3llx: \PYGZdq{}}\PYG{p}{,} \PYG{n}{buf}\PYG{p}{,} \PYG{n}{ofs}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+      \PYG{n}{res} \PYG{o}{+=} \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stderr}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}5c\PYGZpc{}10p : \PYGZdq{}}\PYG{p}{,} \PYG{l+s+sc}{\PYGZsq{} \PYGZsq{}}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+  \PYG{p}{\PYGZcb{}}
+
+  \PYG{n}{va\PYGZus{}start}\PYG{p}{(}\PYG{n}{ap}\PYG{p}{,} \PYG{n}{fmt}\PYG{p}{);}
+  \PYG{n}{res} \PYG{o}{+=} \PYG{n}{vfprintf}\PYG{p}{(}\PYG{n}{stderr}\PYG{p}{,} \PYG{n}{fmt}\PYG{p}{,} \PYG{n}{ap}\PYG{p}{);}
+  \PYG{n}{va\PYGZus{}end}\PYG{p}{(}\PYG{n}{ap}\PYG{p}{);}
+
+  \PYG{n}{fprintf}\PYG{p}{(}\PYG{n}{stderr}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+
+  \PYG{k}{return} \PYG{n}{res}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

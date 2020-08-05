@@ -1,0 +1,112 @@
+1. 프로듀서 컨수머 문제
+프로듀서와 컨수머가 하나씩밖에 없을 때, 세마포어 사용하지 않고 큐 만들어서 하기
+큐의 크기는 n개의 array
+이런 경우에 어떻게 하면 락 없이 잘 동작을 할 수 있겠는지 코드를 짜 보시오.
+
+read_index와 write_index를 조절하여 read_index < write_index이 되게 한다.
+#define NITERS 5
+#define n NITERS
+int arr[n];
+int read_index=0;
+int write_index=0;
+int main() {
+	pthread_t tid_producer;
+	pthread_t tid_consumer;
+	/* Create threads and wait */
+	 Pthread_create(&tid_producer, NULL, producer, NULL);
+	 Pthread_create(&tid_consumer, NULL, consumer, NULL);
+	 Pthread_join(tid_producer, NULL);
+	 Pthread_join(tid_consumer, NULL);
+	 exit(0);
+}
+
+void *producer(void *arg) {
+	int i, item;
+	for (i=0; i<NITERS; i++) {
+		/* Produce item */
+		item = i;
+		printf("produced %d\n",item);
+		/* Write item to buf */
+		arr[write_index%n] = item;
+		write_index++; // int overflow는 n이 작으므로 고려하지 않는다.
+	}
+	return NULL;
+}
+
+void *consumer(void *arg) {
+	int i, item;
+	for (i=0; i<NITERS; i++) {
+		/* Read item from buf */
+		while(read_index>= write_index) {
+			sleep(1); // wait 등
+		}
+		item = arr[read_index%n];
+		read_index++; // int overflow는 n이 작으므로 고려하지 않는다.
+		/* Consume item */
+		printf("consumed %d\n“, item);
+	}
+	return NULL;
+}
+
+2. readers writers problem에서
+우리가 배운 예는 {
+reader가 읽고 있으면 writer는 쓸 수 없다
+그런데 writer가 기다리는 동안에 reader 가 다른게 들어오면 걔는 writer를 앞지른다
+writer는 무한히 기다릴지도 모른다
+}
+이번에는 writer에 priority를 주자
+writer가 기다리고 있으면 뒤에 있는 reader는 앞지를 수 없다
+그런데 만약에 reader 뒤에 writer 뒤에 reader 뒤에 writer가 오면 이번에 reader writer writer reader 순으로 처리되게 하는 코드
+
+int realwritecnt; /* Initially 0 */
+int waitwritecnt;/* initially 0 */
+int realreadcnt; /* initially 0 */
+int waitreadcnt;/* initially 0 */
+sem_t mutex, readdata_mutex, writedata_mutex; /* initially 1 */ 
+void reader(void) { 
+	while (1) {
+		P(&mutex);
+		if(realwritecnt + wailtwritecnt == 0)
+			V(&readdata_mutex); // 미리 락을 푼다.
+			realreadcnt ++;
+		else
+			waitreadcnt++;
+		V(&mutex);
+		P(&readdata_mutex); // 밀린 reader들이 모이는 곳
+		// read
+
+		P(&mutex);
+		realreadcnt--;
+		if(realreadcnt == 0 && waitwritecnt > 0) 
+			V(&writedata_mutex);
+			waitwritecnt--;
+			realwritecnt++;
+		V(&mutex);
+	} 
+}
+
+
+void writer(void) { 
+	while (1) { 
+		P(&mutex);
+		if(realreadcnt + realwritecnt + waitwritecnt == 0)
+			V(&writedata_mutex); // 미리 락을 푼다
+			realwritecnt++;
+		else
+			waitwritecnt++;
+		V(&mutex);
+		P(&writedata_mutex); // 밀린 writer들이 모이는 곳
+		/* Writing here */ 
+		P(&mutex);
+		realwritecnt--;
+		if(waitwritecnt > 0) // 기다리는  writer가 있다면
+			V(&writedata_mutex);
+			realwritecnt++;
+			waitwritecnt--;
+		else if(waitreadcnt >0) // 기다리는 writer가 없고 기다리는 reader가 있다면
+			V(&readdata_mutex);
+			realreadcnt++;
+			waitreadcnt--;
+		V(&mutex);
+	} 
+}

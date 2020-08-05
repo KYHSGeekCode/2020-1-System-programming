@@ -1,0 +1,18 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/bonus\PYGZdl{} make run test4}
+\PYG{g+go}{  cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{  [0001] Memory tracer started.}
+\PYG{g+go}{  [0002]         main:6  : malloc( 1024 ) = 0x12d8060}
+\PYG{g+go}{  [0003]         main:11 : free( 0x12d8060 )}
+\PYG{g+go}{  [0004]         main:19 : free( 0x12d8060 )}
+\PYG{g+go}{  [0005]             *** DOUBLE\PYGZus{}FREE  *** (ignoring)}
+\PYG{g+go}{  [0006]         main:23 : free( 0x1706e90 )}
+\PYG{g+go}{  [0007]             *** ILLEGAL\PYGZus{}FREE *** (ignoring)}
+\PYG{g+go}{  [0008]}
+\PYG{g+go}{  [0009] Statistics}
+\PYG{g+go}{  [0010]   allocated\PYGZus{}total      1024}
+\PYG{g+go}{  [0011]   allocated\PYGZus{}avg        1024}
+\PYG{g+go}{  [0012]   freed\PYGZus{}total          1024}
+\PYG{g+go}{  [0013]}
+\PYG{g+go}{  [0014] Memory tracer stopped.}
+\end{Verbatim}

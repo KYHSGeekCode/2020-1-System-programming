@@ -1,0 +1,17 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+gp}{user102@SystemProgramming:\PYGZti{}/handout/part1\PYGZdl{}} make run test1
+\PYG{g+go}{cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{[0001] Memory tracer started.}
+\PYG{g+go}{[0002]           (nil) : malloc( 1024 ) = 0x16e1060}
+\PYG{g+go}{[0003]           (nil) : malloc( 32 ) = 0x16e1470}
+\PYG{g+go}{[0004]           (nil) : malloc( 1 ) = 0x16e14a0}
+\PYG{g+go}{[0005]           (nil) : free( 0x16e14a0 )}
+\PYG{g+go}{[0006]           (nil) : free( 0x16e1470 )}
+\PYG{g+go}{[0007]}
+\PYG{g+go}{[0008] Statistics}
+\PYG{g+go}{[0009]   allocated\PYGZus{}total      1057}
+\PYG{g+go}{[0010]   allocated\PYGZus{}avg        352}
+\PYG{g+go}{[0011]   freed\PYGZus{}total          0}
+\PYG{g+go}{[0012]}
+\PYG{g+go}{[0013] Memory tracer stopped.}
+\end{Verbatim}

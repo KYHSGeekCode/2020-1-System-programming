@@ -1,0 +1,14 @@
+\contentsline {section}{\numberline {1}Introduction}{1}{section.0.1}%
+\contentsline {paragraph}{}{1}{section*.2}%
+\contentsline {section}{\numberline {2}Part 1: ptree}{1}{section.0.2}%
+\contentsline {subsection}{\numberline {2.1}Step 1. 커널 모듈의 구조 구현}{1}{subsection.0.2.1}%
+\contentsline {subsection}{\numberline {2.2}Step 2. debug file system 만들기}{2}{subsection.0.2.2}%
+\contentsline {subsection}{\numberline {2.3}Step 3. read 함수 구현}{2}{subsection.0.2.3}%
+\contentsline {subsection}{\numberline {2.4}Step 4. 마무리 함수 구현}{5}{subsection.0.2.4}%
+\contentsline {section}{\numberline {3}Part 2: paddr}{5}{section.0.3}%
+\contentsline {subsection}{\numberline {3.1}Step 1. debug file system 만들기}{5}{subsection.0.3.1}%
+\contentsline {subsection}{\numberline {3.2}Step 2. read 함수 구현}{6}{subsection.0.3.2}%
+\contentsline {section}{\numberline {4}Conclusion}{7}{section.0.4}%
+\contentsline {subsection}{\numberline {4.1}어려웠던 점}{7}{subsection.0.4.1}%
+\contentsline {subsubsection}{재부팅}{7}{section*.3}%
+\contentsline {subsection}{\numberline {4.2}놀라웠던 점}{7}{subsection.0.4.2}%

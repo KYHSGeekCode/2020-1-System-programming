@@ -1,0 +1,45 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}define NITERS 5}
+\PYG{c+cp}{\PYGZsh{}define n NITERS}
+\PYG{k+kt}{int} \PYG{n}{arr}\PYG{p}{[}\PYG{n}{n}\PYG{p}{];}
+\PYG{k+kt}{int} \PYG{n}{read\PYGZus{}index}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k+kt}{int} \PYG{n}{write\PYGZus{}index}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k+kt}{int} \PYG{n+nf}{main}\PYG{p}{()} \PYG{p}{\PYGZob{}}
+    \PYG{n}{pthread\PYGZus{}t} \PYG{n}{tid\PYGZus{}producer}\PYG{p}{;}
+    \PYG{n}{pthread\PYGZus{}t} \PYG{n}{tid\PYGZus{}consumer}\PYG{p}{;}
+    \PYG{c+cm}{/* Create threads and wait */}
+     \PYG{n}{Pthread\PYGZus{}create}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{tid\PYGZus{}producer}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{n}{producer}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+     \PYG{n}{Pthread\PYGZus{}create}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{tid\PYGZus{}consumer}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{n}{consumer}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+     \PYG{n}{Pthread\PYGZus{}join}\PYG{p}{(}\PYG{n}{tid\PYGZus{}producer}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+     \PYG{n}{Pthread\PYGZus{}join}\PYG{p}{(}\PYG{n}{tid\PYGZus{}consumer}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+     \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{o}{*}\PYG{n+nf}{producer}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{arg}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{,} \PYG{n}{item}\PYG{p}{;}
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i}\PYG{o}{\PYGZlt{}}\PYG{n}{NITERS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{c+cm}{/* Produce item */}
+        \PYG{n}{item} \PYG{o}{=} \PYG{n}{i}\PYG{p}{;}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}produced \PYGZpc{}d}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,}\PYG{n}{item}\PYG{p}{);}
+        \PYG{c+cm}{/* Write item to buf */}
+        \PYG{n}{arr}\PYG{p}{[}\PYG{n}{write\PYGZus{}index}\PYG{o}{\PYGZpc{}}\PYG{n}{n}\PYG{p}{]} \PYG{o}{=} \PYG{n}{item}\PYG{p}{;}
+        \PYG{n}{write\PYGZus{}index}\PYG{o}{++}\PYG{p}{;} \PYG{c+c1}{// int overflow는 n이 작으므로 고려하지 않는다.}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{o}{*}\PYG{n+nf}{consumer}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{arg}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{i}\PYG{p}{,} \PYG{n}{item}\PYG{p}{;}
+    \PYG{k}{for} \PYG{p}{(}\PYG{n}{i}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;} \PYG{n}{i}\PYG{o}{\PYGZlt{}}\PYG{n}{NITERS}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{c+cm}{/* Read item from buf */}
+        \PYG{k}{while}\PYG{p}{(}\PYG{n}{read\PYGZus{}index}\PYG{o}{\PYGZgt{}=} \PYG{n}{write\PYGZus{}index}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{sleep}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);} \PYG{c+c1}{// wait 등}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{item} \PYG{o}{=} \PYG{n}{arr}\PYG{p}{[}\PYG{n}{read\PYGZus{}index}\PYG{o}{\PYGZpc{}}\PYG{n}{n}\PYG{p}{];}
+        \PYG{n}{read\PYGZus{}index}\PYG{o}{++}\PYG{p}{;} \PYG{c+c1}{// int overflow는 n이 작으므로 고려하지 않는다.}
+        \PYG{c+cm}{/* Consume item */}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}consumed \PYGZpc{}d}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{“, item);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

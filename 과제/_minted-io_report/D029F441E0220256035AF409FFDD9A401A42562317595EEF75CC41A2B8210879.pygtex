@@ -1,0 +1,16 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}csapp.h\PYGZdq{}}
+
+\PYG{k+kt}{int} \PYG{n+nf}{main}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{argc}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{argv}\PYG{p}{[])} \PYG{p}{\PYGZob{}}
+  \PYG{k+kt}{int} \PYG{n}{fd1}\PYG{p}{,} \PYG{n}{fd2}\PYG{p}{,} \PYG{n}{fd3}\PYG{p}{;}
+  \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{fname} \PYG{o}{=} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{];}
+  \PYG{n}{fd1} \PYG{o}{=} \PYG{n}{Open}\PYG{p}{(}\PYG{n}{fname}\PYG{p}{,} \PYG{n}{O\PYGZus{}CREAT} \PYG{o}{|} \PYG{n}{O\PYGZus{}TRUNC} \PYG{o}{|} \PYG{n}{O\PYGZus{}RDWR}\PYG{p}{,} \PYG{n}{S\PYGZus{}IRUSR} \PYG{o}{|} \PYG{n}{S\PYGZus{}IWUSR}\PYG{p}{);}
+  \PYG{n}{Write}\PYG{p}{(}\PYG{n}{fd1}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}pqrs\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{4}\PYG{p}{);}
+  \PYG{n}{fd3} \PYG{o}{=} \PYG{n}{Open}\PYG{p}{(}\PYG{n}{fname}\PYG{p}{,} \PYG{n}{O\PYGZus{}APPEND} \PYG{o}{|} \PYG{n}{O\PYGZus{}WRONLY}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+  \PYG{n}{Write}\PYG{p}{(}\PYG{n}{fd3}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}jklmn\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{5}\PYG{p}{);}
+  \PYG{n}{fd2} \PYG{o}{=} \PYG{n}{dup}\PYG{p}{(}\PYG{n}{fd1}\PYG{p}{);} \PYG{c+cm}{/* Allocates descriptor */}
+  \PYG{n}{Write}\PYG{p}{(}\PYG{n}{fd2}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}wxyz\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{4}\PYG{p}{);}
+  \PYG{n}{Write}\PYG{p}{(}\PYG{n}{fd3}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}ef\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mi}{2}\PYG{p}{);}
+  \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

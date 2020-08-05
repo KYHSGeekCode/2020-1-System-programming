@@ -1,0 +1,56 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k+kt}{int} \PYG{n}{realwritecnt}\PYG{p}{;} \PYG{c+cm}{/* Initially 0 */}
+\PYG{k+kt}{int} \PYG{n}{waitwritecnt}\PYG{p}{;}\PYG{c+cm}{/* initially 0 */}
+\PYG{k+kt}{int} \PYG{n}{realreadcnt}\PYG{p}{;} \PYG{c+cm}{/* initially 0 */}
+\PYG{k+kt}{int} \PYG{n}{waitreadcnt}\PYG{p}{;}\PYG{c+cm}{/* initially 0 */}
+\PYG{n}{sem\PYGZus{}t} \PYG{n}{mutex}\PYG{p}{,} \PYG{n}{readdata\PYGZus{}mutex}\PYG{p}{,} \PYG{n}{writedata\PYGZus{}mutex}\PYG{p}{;} \PYG{c+cm}{/* initially 1 */}
+\PYG{k+kt}{void} \PYG{n+nf}{reader}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{while} \PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{realwritecnt} \PYG{o}{+} \PYG{n}{wailtwritecnt} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{readdata\PYGZus{}mutex}\PYG{p}{);} \PYG{c+c1}{// 미리 락을 푼다.}
+            \PYG{n}{realreadcnt}\PYG{o}{++}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else}
+            \PYG{n}{waitreadcnt}\PYG{o}{++}\PYG{p}{;}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{readdata\PYGZus{}mutex}\PYG{p}{);} \PYG{c+c1}{// 밀린 reader들이 모이는 곳}
+        \PYG{c+c1}{// read}
+
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+        \PYG{n}{realreadcnt}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{realreadcnt} \PYG{o}{==} \PYG{l+m+mi}{0} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{waitwritecnt} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// 다 읽었고 writer가 기다리고 있는 것이 있다면 락을 풀어준다.}
+            \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{writedata\PYGZus{}mutex}\PYG{p}{);}
+            \PYG{n}{waitwritecnt}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{p}{;}
+            \PYG{n}{realwritecnt}\PYG{o}{++}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+
+
+\PYG{k+kt}{void} \PYG{n+nf}{writer}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{while} \PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{realreadcnt} \PYG{o}{+} \PYG{n}{realwritecnt} \PYG{o}{+} \PYG{n}{waitwritecnt} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{writedata\PYGZus{}mutex}\PYG{p}{);} \PYG{c+c1}{// 미리 락을 푼다}
+            \PYG{n}{realwritecnt}\PYG{o}{++}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else}
+            \PYG{n}{waitwritecnt}\PYG{o}{++}\PYG{p}{;}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{writedata\PYGZus{}mutex}\PYG{p}{);} \PYG{c+c1}{// 밀린 writer들이 모이는 곳}
+        \PYG{c+cm}{/* Writing here */}
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+        \PYG{n}{realwritecnt}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{waitwritecnt} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// 기다리는  writer가 있다면 writer 락을 풀어준다.}
+            \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{writedata\PYGZus{}mutex}\PYG{p}{);}
+            \PYG{n}{realwritecnt}\PYG{o}{++}\PYG{p}{;}
+            \PYG{n}{waitwritecnt}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{k}{if}\PYG{p}{(}\PYG{n}{waitreadcnt} \PYG{o}{\PYGZgt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// 기다리는 writer가 없고 기다리는 reader가 있다면 락을 풀어준다}
+            \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{readdata\PYGZus{}mutex}\PYG{p}{);}
+            \PYG{n}{realreadcnt}\PYG{o}{++}\PYG{p}{;}
+            \PYG{n}{waitreadcnt}\PYG{o}{\PYGZhy{}\PYGZhy{}}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{mutex}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

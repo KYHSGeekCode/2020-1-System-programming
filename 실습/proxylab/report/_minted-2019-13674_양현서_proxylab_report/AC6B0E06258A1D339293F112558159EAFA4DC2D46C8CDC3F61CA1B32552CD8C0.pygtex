@@ -1,0 +1,160 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}lrucache.h\PYGZdq{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}csapp.h\PYGZdq{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stddef.h\PYGZgt{} // NULL}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdlib.h\PYGZgt{} // malloc, free}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}string.h\PYGZgt{} // strcmp}
+
+\PYG{n}{sem\PYGZus{}t} \PYG{n}{semaphore}\PYG{p}{;}
+
+\PYG{c+c1}{// effectively, singleton}
+\PYG{k+kt}{void} \PYG{n+nf}{initCache}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{totalSize} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{front} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{rear} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{bzero}\PYG{p}{((}\PYG{k+kt}{char} \PYG{o}{*}\PYG{p}{)}\PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{hashToLRUNode}\PYG{p}{,} \PYG{n}{LRU\PYGZus{}HASHMAPSIZE}\PYG{p}{);}
+    \PYG{n}{Sem\PYGZus{}init}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{n+nf}{freeCache}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*}\PYG{n}{iterator} \PYG{o}{=} \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{front}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{next} \PYG{o}{=} \PYG{n}{iterator}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{next}\PYG{p}{;}
+        \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data}\PYG{p}{);}
+        \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+        \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+        \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{next}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{for}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{i}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}\PYG{n}{i}\PYG{o}{\PYGZlt{}}\PYG{n}{LRU\PYGZus{}HASHMAPSIZE}\PYG{p}{;} \PYG{n}{i}\PYG{o}{++}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{listNode} \PYG{o}{=}  \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{i}\PYG{p}{];}
+        \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{listNode}\PYG{p}{;}
+        \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{next} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+            \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{key}\PYG{p}{);}
+            \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);} 
+            \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{next}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n+nf}{LRUCache\PYGZus{}get}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*}\PYG{n}{cache}\PYG{p}{,} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{,} \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{metadata}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{listNode} \PYG{o}{=} \PYG{n}{LRUCache\PYGZus{}Hash\PYGZus{}Get}\PYG{p}{(}\PYG{n}{cache}\PYG{p}{,} \PYG{n}{key}\PYG{p}{);}
+    \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{listNode}\PYG{p}{)} \PYG{p}{\PYGZob{}} \PYG{c+c1}{// pop the node to front of the list}
+        \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{node} \PYG{o}{=} \PYG{n}{listNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data}\PYG{p}{;}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;} \PYG{c+c1}{// remove from list}
+            \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{=} \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{c+c1}{// insert front}
+        \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{front}\PYG{p}{;}
+        \PYG{n}{node} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+        \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{=} \PYG{n}{node}\PYG{p}{;}
+        \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front} \PYG{o}{=} \PYG{n}{node}\PYG{p}{;}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+        \PYG{k}{return} \PYG{n}{node}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+        \PYG{c+c1}{// create data and insert}
+        \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{newNode} \PYG{o}{=} \PYG{n}{createData}\PYG{p}{(}\PYG{n}{key}\PYG{p}{,} \PYG{n}{metadata}\PYG{p}{);}
+        \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+        \PYG{n}{newNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front}\PYG{p}{;}
+        \PYG{n}{newNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+        \PYG{n}{newNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hash} \PYG{o}{=} \PYG{n}{LRUCache\PYGZus{}Hash}\PYG{p}{(}\PYG{n}{key}\PYG{p}{);}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{=} \PYG{n}{newNode}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front} \PYG{o}{=} \PYG{n}{newNode}\PYG{p}{;}
+        \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{totalSize} \PYG{o}{+=} \PYG{n}{newNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{size}\PYG{p}{;}
+        \PYG{k}{while}\PYG{p}{(}\PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{totalSize} \PYG{o}{\PYGZgt{}} \PYG{n}{MAX\PYGZus{}CACHE\PYGZus{}SIZE}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{c+c1}{// evict oldest data}
+            \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{rearIterator} \PYG{o}{=} \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{front}\PYG{p}{;}
+            \PYG{k}{while}\PYG{p}{(}\PYG{n}{rearIterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{n}{rearIterator} \PYG{o}{=} \PYG{n}{rearIterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}}
+            \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{rear} \PYG{o}{=} \PYG{n}{rearIterator}\PYG{p}{;}
+            \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{toDelete} \PYG{o}{=} \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{rear}\PYG{p}{;}
+            \PYG{c+c1}{// remove from hashmap}
+            \PYG{k+kt}{int} \PYG{n}{hash} \PYG{o}{=} \PYG{n}{toDelete} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hash}\PYG{p}{;}
+            \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=}  \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{hash}\PYG{p}{];}
+            \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{previt} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;} \PYG{c+c1}{// \PYGZam{}(cache \PYGZhy{}\PYGZgt{} hashToLRUNode[hash]);}
+            \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{next} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+                \PYG{k}{if}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data} \PYG{o}{==} \PYG{n}{toDelete}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+                    \PYG{k}{if}\PYG{p}{(}\PYG{n}{previt} \PYG{o}{!=} \PYG{n+nb}{NULL}\PYG{p}{)}
+                        \PYG{n}{previt} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+                    \PYG{k}{else}
+                        \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{hash}\PYG{p}{]} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+                    \PYG{n}{free}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{);}
+                    \PYG{k}{break}\PYG{p}{;}
+                \PYG{p}{\PYGZcb{}}
+                \PYG{n}{previt} \PYG{o}{=} \PYG{n}{iterator}\PYG{p}{;}
+                \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{next}\PYG{p}{;}
+            \PYG{p}{\PYGZcb{}}
+
+            \PYG{n}{free}\PYG{p}{(}\PYG{n}{toDelete} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data}\PYG{p}{);}
+            \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{totalSize} \PYG{o}{\PYGZhy{}=} \PYG{n}{toDelete}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{;}
+            \PYG{k}{if}\PYG{p}{(}\PYG{n}{toDelete} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev}\PYG{p}{)}
+                \PYG{n}{toDelete} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+            \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{rear} \PYG{o}{=} \PYG{n}{toDelete} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{prev}\PYG{p}{;}
+            \PYG{n}{free}\PYG{p}{(}\PYG{n}{toDelete}\PYG{p}{);}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+        \PYG{n}{LRUCache\PYGZus{}Hash\PYGZus{}Put}\PYG{p}{(}\PYG{n}{cache}\PYG{p}{,} \PYG{n}{key}\PYG{p}{,} \PYG{n}{newNode}\PYG{p}{);}
+        \PYG{k}{return} \PYG{n}{newNode}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n+nf}{LRUCache\PYGZus{}Hash\PYGZus{}Get}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*}\PYG{n}{cache}\PYG{p}{,} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{hash} \PYG{o}{=} \PYG{n}{LRUCache\PYGZus{}Hash}\PYG{p}{(}\PYG{n}{key}\PYG{p}{);}
+    \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{listNode} \PYG{o}{=} \PYG{n}{cache}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{hash}\PYG{p}{];}
+    \PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{listNode}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+        \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{listNode}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{if}\PYG{p}{(}\PYG{n}{listNode}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{key} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{key} \PYG{o}{\PYGZam{}\PYGZam{}}  \PYG{n}{strcmp}\PYG{p}{(}\PYG{n}{key}\PYG{p}{,} \PYG{n}{listNode}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{key}\PYG{p}{)} \PYG{o}{==} \PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+            \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+            \PYG{k}{return} \PYG{n}{listNode}\PYG{p}{;}
+        \PYG{p}{\PYGZcb{}}
+        \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+    \PYG{k}{return} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{n+nf}{LRUCache\PYGZus{}Hash\PYGZus{}Put}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{,} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{,} \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{data}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{hash} \PYG{o}{=} \PYG{n}{LRUCache\PYGZus{}Hash}\PYG{p}{(}\PYG{n}{key}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{newListNode} \PYG{o}{=} \PYG{n}{malloc}\PYG{p}{(}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUHashListNode}\PYG{p}{));}
+    \PYG{c+c1}{// iterator \PYGZhy{}\PYGZgt{} next = newListNode;}
+    \PYG{n}{newListNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{data} \PYG{o}{=} \PYG{n}{data}\PYG{p}{;}
+    \PYG{n}{newListNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{key} \PYG{o}{=} \PYG{n}{strdup}\PYG{p}{(}\PYG{n}{key}\PYG{p}{);}
+    \PYG{n}{newListNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hash} \PYG{o}{=} \PYG{n}{hash}\PYG{p}{;}
+    \PYG{n}{newListNode} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+    \PYG{n}{P}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{temp} \PYG{o}{=} \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{hash}\PYG{p}{];}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{temp}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{temp}\PYG{p}{;}
+        \PYG{k}{while}\PYG{p}{(}\PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{)}
+            \PYG{n}{iterator} \PYG{o}{=} \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next}\PYG{p}{;}
+        \PYG{n}{iterator} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{next} \PYG{o}{=} \PYG{n}{newListNode}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{n}{cache} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{hash}\PYG{p}{]} \PYG{o}{=} \PYG{n}{newListNode}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{V}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{semaphore}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/* key: uri */}
+\PYG{k+kt}{int} \PYG{n+nf}{LRUCache\PYGZus{}Hash}\PYG{p}{(}\PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{hash} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{k}{while}\PYG{p}{(}\PYG{o}{*}\PYG{n}{key}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{hash} \PYG{o}{=} \PYG{p}{((((}\PYG{n}{hash} \PYG{o}{\PYGZlt{}\PYGZlt{}} \PYG{l+m+mi}{5}\PYG{p}{)} \PYG{o}{\PYGZhy{}} \PYG{n}{hash}\PYG{p}{))}  \PYG{o}{+} \PYG{o}{*}\PYG{n}{key}\PYG{p}{)} \PYG{o}{\PYGZpc{}} \PYG{n}{LRU\PYGZus{}HASHMAPSIZE}\PYG{p}{;}
+        \PYG{n}{key}\PYG{o}{++}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{k}{return} \PYG{n}{hash}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

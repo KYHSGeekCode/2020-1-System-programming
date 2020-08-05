@@ -1,0 +1,19 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part3\PYGZdl{} objdump \PYGZhy{}d ../test/test4}
+\PYG{g+go}{  (중략)}
+\PYG{g+go}{  0000000000400470 \PYGZlt{}main\PYGZgt{}:}
+\PYG{g+go}{  400470:       53                      push   \PYGZpc{}rbx}
+\PYG{g+go}{  400471:       bf 00 04 00 00          mov    \PYGZdl{}0x400,\PYGZpc{}edi}
+\PYG{g+go}{  400476:       e8 d5 ff ff ff          callq  400450 \PYGZlt{}malloc@plt\PYGZgt{}}
+\PYG{g+go}{  40047b:       48 89 c3                mov    \PYGZpc{}rax,\PYGZpc{}rbx}
+\PYG{g+go}{  40047e:       48 89 c7                mov    \PYGZpc{}rax,\PYGZpc{}rdi}
+\PYG{g+go}{  400481:       e8 aa ff ff ff          callq  400430 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  400486:       48 89 df                mov    \PYGZpc{}rbx,\PYGZpc{}rdi}
+\PYG{g+go}{  400489:       e8 a2 ff ff ff          callq  400430 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  40048e:       bf 90 6e 70 01          mov    \PYGZdl{}0x1706e90,\PYGZpc{}edi}
+\PYG{g+go}{  400493:       e8 98 ff ff ff          callq  400430 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  400498:       31 c0                   xor    \PYGZpc{}eax,\PYGZpc{}eax}
+\PYG{g+go}{  40049a:       5b                      pop    \PYGZpc{}rbx}
+\PYG{g+go}{  40049b:       c3                      retq}
+\PYG{g+go}{  40049c:       0f 1f 40 00             nopl   0x0(\PYGZpc{}rax)}
+\end{Verbatim}

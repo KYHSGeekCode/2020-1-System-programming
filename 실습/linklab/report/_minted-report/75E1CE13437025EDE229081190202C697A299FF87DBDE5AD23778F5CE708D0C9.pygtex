@@ -1,0 +1,16 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+  \PYG{err}{00000000004004}\PYG{n+nf}{a0} \PYG{err}{\PYGZlt{}}\PYG{n+no}{\PYGZus{}start}\PYG{err}{\PYGZgt{}}\PYG{p}{:}
+  \PYG{err}{4004}\PYG{n+nl}{a0:}       \PYG{err}{31} \PYG{n+nf}{ed}                   \PYG{n+no}{xor}    \PYG{n+nv}{\PYGZpc{}ebp}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}ebp}
+  \PYG{err}{4004}\PYG{n+nl}{a2:}       \PYG{err}{49} \PYG{err}{89} \PYG{n+nf}{d1}                \PYG{n+no}{mov}    \PYG{n+nv}{\PYGZpc{}rdx}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}r9}
+  \PYG{err}{4004}\PYG{n+nl}{a5:}       \PYG{err}{5}\PYG{n+nf}{e}                      \PYG{n+no}{pop}    \PYG{n+nv}{\PYGZpc{}rsi}
+  \PYG{err}{4004}\PYG{n+nl}{a6:}       \PYG{err}{48} \PYG{err}{89} \PYG{n+nf}{e2}                \PYG{n+no}{mov}    \PYG{n+nv}{\PYGZpc{}rsp}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}rdx}
+  \PYG{err}{4004}\PYG{n+nl}{a9:}       \PYG{err}{48} \PYG{err}{83} \PYG{n+nf}{e4} \PYG{n+no}{f0}             \PYG{n+no}{and}    \PYG{n+no}{\PYGZdl{}0xfffffffffffffff0}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}rsp}
+  \PYG{err}{4004}\PYG{n+nl}{ad:}       \PYG{err}{50}                      \PYG{n+nf}{push}   \PYG{n+nv}{\PYGZpc{}rax}
+  \PYG{err}{4004}\PYG{n+nl}{ae:}       \PYG{err}{54}                      \PYG{n+nf}{push}   \PYG{n+nv}{\PYGZpc{}rsp}
+  \PYG{err}{4004}\PYG{n+nl}{af:}       \PYG{err}{49} \PYG{n+nf}{c7} \PYG{n+no}{c0} \PYG{l+m+mi}{10} \PYG{l+m+mi}{06} \PYG{l+m+mi}{40} \PYG{l+m+mi}{00}    \PYG{n+no}{mov}    \PYG{n+no}{\PYGZdl{}0x400610}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}r8}
+  \PYG{err}{4004}\PYG{n+nl}{b6:}       \PYG{err}{48} \PYG{n+nf}{c7} \PYG{n+no}{c1} \PYG{n+no}{a0} \PYG{l+m+mi}{05} \PYG{l+m+mi}{40} \PYG{l+m+mi}{00}    \PYG{n+no}{mov}    \PYG{n+no}{\PYGZdl{}0x4005a0}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}rcx}
+  \PYG{err}{4004}\PYG{n+nl}{bd:}       \PYG{err}{48} \PYG{n+nf}{c7} \PYG{n+no}{c7} \PYG{l+m+mi}{70} \PYG{l+m+mi}{04} \PYG{l+m+mi}{40} \PYG{l+m+mi}{00}    \PYG{n+no}{mov}    \PYG{n+no}{\PYGZdl{}0x400470}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}rdi}
+  \PYG{err}{4004}\PYG{n+nl}{c4:}       \PYG{n+nf}{e8} \PYG{l+m+mi}{77} \PYG{n+no}{ff} \PYG{n+no}{ff} \PYG{n+no}{ff}          \PYG{n+no}{callq}  \PYG{l+m+mh}{400440} \PYG{p}{\PYGZlt{}}\PYG{n+no}{\PYGZus{}\PYGZus{}libc\PYGZus{}start\PYGZus{}main@plt}\PYG{p}{\PYGZgt{}}
+  \PYG{err}{4004}\PYG{n+nl}{c9:}       \PYG{n+nf}{f4}                      \PYG{n+no}{hlt}
+  \PYG{err}{4004}\PYG{n+nl}{ca:}       \PYG{err}{66} \PYG{err}{0}\PYG{n+nf}{f} \PYG{l+m+mi}{1}\PYG{n+no}{f} \PYG{l+m+mi}{44} \PYG{l+m+mi}{00} \PYG{l+m+mi}{00}       \PYG{n+no}{nopw}   \PYG{l+m+mi}{0x0}\PYG{p}{(}\PYG{n+nv}{\PYGZpc{}rax}\PYG{p}{,}\PYG{n+nv}{\PYGZpc{}rax}\PYG{p}{,}\PYG{l+m+mi}{1}\PYG{p}{)}
+\end{Verbatim}

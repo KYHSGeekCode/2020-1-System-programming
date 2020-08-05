@@ -1,0 +1,24 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+    \PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}csapp.h\PYGZdq{}}
+
+    \PYG{k+kt}{int} \PYG{n+nf}{main}\PYG{p}{(}\PYG{k+kt}{int} \PYG{n}{argc}\PYG{p}{,} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{argv}\PYG{p}{[])} \PYG{p}{\PYGZob{}}
+      \PYG{k+kt}{int} \PYG{n}{fd1}\PYG{p}{;}
+      \PYG{k+kt}{int} \PYG{n}{s} \PYG{o}{=} \PYG{n}{getpid}\PYG{p}{()} \PYG{o}{\PYGZam{}} \PYG{l+m+mh}{0x1}\PYG{p}{;}
+      \PYG{k+kt}{char} \PYG{n}{c1}\PYG{p}{,} \PYG{n}{c2}\PYG{p}{;}
+      \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{fname} \PYG{o}{=} \PYG{n}{argv}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{];}
+      \PYG{n}{fd1} \PYG{o}{=} \PYG{n}{Open}\PYG{p}{(}\PYG{n}{fname}\PYG{p}{,} \PYG{n}{O\PYGZus{}RDONLY}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{);}
+      \PYG{n}{Read}\PYG{p}{(}\PYG{n}{fd1}\PYG{p}{,} \PYG{o}{\PYGZam{}} \PYG{n}{c1}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+      \PYG{k}{if} \PYG{p}{(}\PYG{n}{fork}\PYG{p}{())} \PYG{p}{\PYGZob{}}
+        \PYG{c+cm}{/* Parent */}
+        \PYG{n}{sleep}\PYG{p}{(}\PYG{n}{s}\PYG{p}{);}
+        \PYG{n}{Read}\PYG{p}{(}\PYG{n}{fd1}\PYG{p}{,} \PYG{o}{\PYGZam{}} \PYG{n}{c2}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Parent: c1 = \PYGZpc{}c, c2 = \PYGZpc{}c}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{c1}\PYG{p}{,} \PYG{n}{c2}\PYG{p}{);}
+      \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+        \PYG{c+cm}{/* Child */}
+        \PYG{n}{sleep}\PYG{p}{(}\PYG{l+m+mi}{1} \PYG{o}{\PYGZhy{}} \PYG{n}{s}\PYG{p}{);}
+        \PYG{n}{Read}\PYG{p}{(}\PYG{n}{fd1}\PYG{p}{,} \PYG{o}{\PYGZam{}} \PYG{n}{c2}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{);}
+        \PYG{n}{printf}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Child: c1 = \PYGZpc{}c, c2 = \PYGZpc{}c}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{c1}\PYG{p}{,} \PYG{n}{c2}\PYG{p}{);}
+      \PYG{p}{\PYGZcb{}}
+      \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+\end{Verbatim}

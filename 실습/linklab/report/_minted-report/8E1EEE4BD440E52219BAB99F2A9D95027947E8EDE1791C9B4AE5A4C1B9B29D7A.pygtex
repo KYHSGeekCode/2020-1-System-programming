@@ -1,0 +1,25 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part3\PYGZdl{} objdump \PYGZhy{}d ../test/test1}
+\PYG{g+go}{  (중략)}
+\PYG{g+go}{  Disassembly of section .text:}
+
+\PYG{g+go}{0000000000400470 \PYGZlt{}main\PYGZgt{}:}
+\PYG{g+go}{  400470:       53                      push   \PYGZpc{}rbx}
+\PYG{g+go}{  400471:       bf 00 04 00 00          mov    \PYGZdl{}0x400,\PYGZpc{}edi}
+\PYG{g+go}{  400476:       e8 d5 ff ff ff          callq  400450 \PYGZlt{}malloc@plt\PYGZgt{}}
+\PYG{g+go}{  40047b:       bf 20 00 00 00          mov    \PYGZdl{}0x20,\PYGZpc{}edi}
+\PYG{g+go}{  400480:       e8 cb ff ff ff          callq  400450 \PYGZlt{}malloc@plt\PYGZgt{}}
+\PYG{g+go}{  400485:       bf 01 00 00 00          mov    \PYGZdl{}0x1,\PYGZpc{}edi}
+\PYG{g+go}{  40048a:       48 89 c3                mov    \PYGZpc{}rax,\PYGZpc{}rbx}
+\PYG{g+go}{  40048d:       e8 be ff ff ff          callq  400450 \PYGZlt{}malloc@plt\PYGZgt{}}
+\PYG{g+go}{  400492:       48 89 c7                mov    \PYGZpc{}rax,\PYGZpc{}rdi}
+\PYG{g+go}{  400495:       e8 96 ff ff ff          callq  400430 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  40049a:       48 89 df                mov    \PYGZpc{}rbx,\PYGZpc{}rdi}
+\PYG{g+go}{  40049d:       e8 8e ff ff ff          callq  400430 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  4004a2:       31 c0                   xor    \PYGZpc{}eax,\PYGZpc{}eax}
+\PYG{g+go}{  4004a4:       5b                      pop    \PYGZpc{}rbx}
+\PYG{g+go}{  4004a5:       c3                      retq}
+\PYG{g+go}{  4004a6:       66 2e 0f 1f 84 00 00    nopw   \PYGZpc{}cs:0x0(\PYGZpc{}rax,\PYGZpc{}rax,1)}
+\PYG{g+go}{  4004ad:       00 00 00}
+\PYG{g+go}{  (후략)}
+\end{Verbatim}

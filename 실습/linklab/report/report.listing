@@ -1,0 +1,22 @@
+{2019-13674.202320/part1/memtrace.c}
+
+\section{Part 2: Tracing Unfreed Memory}
+Part 2에서는 Part 1의 정보와 더불어 해제되는 메모리에 대한 정보도 출력하며, 해제되지 않은 메모리의 양과 할당 위치에 대한 정보를 제공한다.
+
+\section{Part 3: Pinpointing Call Locations}
+Part 3에서는 Part 2의 정보에 더불어, \href{https://github.com/libunwind/libunwind}{libunwind} 라이브러리를 이용하여 이 메모리 관리 함수들의 호출 위치를 추적한다.
+
+\inputminted{C}{2019-13674.202320/part3/memtrace.c}
+
+\section{Bonus: Detect and Ignore Illegal Deallocations}
+Bonus에서는 part 1~3을 test4에 대해 적용했을 때 double free와 illegal free 시 크래시 되는 것을 예방하고 대신 각각 DOUBLE FREE와 ILLEGAL FREE 정보를 출력하도록 한다.
+
+\section{Conclusion}
+\subsection{어려웠던 점}
+\subsubsection{익숙한 환경의 부재}
+즐겨 사용하던 emacs 에디터가 없어서 vi 에디터를 사용하였는데, vi 환경에 적응하는 데 시간이 걸렸다.
+\subsubsection{libunwind}
+Part 3에서 libunwind를 이용해 메모리 할당 함수들의 호출 위치를 추적하는데, objdump로 예측했던 offset과 libunwind가 \lstinline{unw_get_proc_name}으로 알려주는 offset이 서로 달라 혼란이 있었다. 기본적으로 libunwind도 스택에 저장된 리턴 어드레스를 이용하는 것이라 해서 callq의 인스트럭션 크기만큼 보정을 해 주어야 할 것 같다는 생각은 들었지만, 예제들을 아무리 찾아 봐도 보정에 대한 이야기는 없어서 혼란스러웠다. 결국 그 추측에 확신을 얻기 위해 libunwind의 소스 코드를 찾아 보았는데, 파일이 너무 많아서 어려움을 겪었다. 다행히 질의응답에 누군가 질문을 올린 것을 발견하여 5의 보정값을 빼는 것에 확신을 얻을 수 있었다.
+\subsection{놀라웠던 점}
+\subsubsection{call이 없는 main}
+objdump로 test 들을 분석해 보는 과정에서 testx도 분석해 보았는데, testx의 \lstinline{main} 코드를 보면 \lstinline{foo} 를 호출하는 부분이 전혀 없었다.

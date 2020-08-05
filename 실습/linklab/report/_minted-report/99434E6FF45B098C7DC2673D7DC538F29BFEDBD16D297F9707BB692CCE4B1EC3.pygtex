@@ -1,0 +1,179 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+c1}{//\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}\PYGZhy{}}
+\PYG{c+c1}{//}
+\PYG{c+c1}{// memtrace}
+\PYG{c+c1}{//}
+\PYG{c+c1}{// trace calls to the dynamic memory manager}
+\PYG{c+c1}{//}
+\PYG{c+cp}{\PYGZsh{}define \PYGZus{}GNU\PYGZus{}SOURCE}
+
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}dlfcn.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdio.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdlib.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}assert.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}memlog.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}memlist.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZdq{}callinfo.h\PYGZdq{}}
+
+\PYG{c+c1}{//}
+\PYG{c+c1}{// function pointers to stdlib\PYGZsq{}s memory management functions}
+\PYG{c+c1}{//}
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{(}\PYG{o}{*}\PYG{n}{mallocp}\PYG{p}{)(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{k}{static} \PYG{n+nf}{void} \PYG{p}{(}\PYG{o}{*}\PYG{n}{freep}\PYG{p}{)(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{)} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{(}\PYG{o}{*}\PYG{n}{callocp}\PYG{p}{)(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{nmemb}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{);}
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{o}{*}\PYG{p}{(}\PYG{o}{*}\PYG{n}{reallocp}\PYG{p}{)(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{);}
+
+\PYG{c+c1}{//}
+\PYG{c+c1}{// statistics \PYGZam{} other global variables}
+\PYG{c+c1}{//}
+\PYG{k}{static} \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{n\PYGZus{}malloc}  \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{n\PYGZus{}calloc}  \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{n\PYGZus{}realloc} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{n\PYGZus{}allocb}  \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{n}{n\PYGZus{}freeb}   \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k}{static} \PYG{n}{item} \PYG{o}{*}\PYG{n}{list} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+
+\PYG{k+kt}{void} \PYG{o}{*} \PYG{n+nf}{malloc}\PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+   \PYG{n}{n\PYGZus{}allocb} \PYG{o}{+=} \PYG{n}{size}\PYG{p}{;}
+   \PYG{n}{n\PYGZus{}malloc}\PYG{o}{++}\PYG{p}{;}
+   \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{resultP} \PYG{o}{=} \PYG{n}{mallocp}\PYG{p}{(}\PYG{n}{size}\PYG{p}{);}
+   \PYG{n}{LOG\PYGZus{}MALLOC}\PYG{p}{(}\PYG{n}{size}\PYG{p}{,} \PYG{n}{resultP}\PYG{p}{);}
+   \PYG{n}{item} \PYG{o}{*} \PYG{n}{allocated} \PYG{o}{=} \PYG{n}{alloc}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{resultP}\PYG{p}{,} \PYG{n}{size}\PYG{p}{);}
+   \PYG{k}{return} \PYG{n}{resultP}\PYG{p}{;}   
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{n+nf}{free}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{ptr}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+   \PYG{n}{LOG\PYGZus{}FREE}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{);}
+   \PYG{n}{item} \PYG{o}{*} \PYG{n}{tobedeallocated} \PYG{o}{=} \PYG{n}{find}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{ptr}\PYG{p}{);}
+   \PYG{k}{if}\PYG{p}{(}\PYG{n}{tobedeallocated}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+      \PYG{k}{if}\PYG{p}{(}\PYG{n}{tobedeallocated} \PYG{o}{\PYGZhy{}\PYGZgt{}} \PYG{n}{cnt} \PYG{o}{\PYGZlt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+         \PYG{n}{LOG\PYGZus{}DOUBLE\PYGZus{}FREE}\PYG{p}{();}
+	 \PYG{k}{return}\PYG{p}{;}
+      \PYG{p}{\PYGZcb{}}
+      \PYG{n}{n\PYGZus{}freeb} \PYG{o}{+=} \PYG{n}{tobedeallocated}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{;} 
+      \PYG{n}{freep}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{);}
+      \PYG{n}{dealloc}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{ptr}\PYG{p}{);}
+   \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+     \PYG{n}{LOG\PYGZus{}ILL\PYGZus{}FREE}\PYG{p}{();}
+   \PYG{p}{\PYGZcb{}}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{o}{*} \PYG{n+nf}{calloc}\PYG{p}{(}\PYG{k+kt}{size\PYGZus{}t} \PYG{n}{nmemb}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+   \PYG{n}{n\PYGZus{}calloc}\PYG{o}{++}\PYG{p}{;}
+   \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{resultP} \PYG{o}{=} \PYG{n}{callocp}\PYG{p}{(}\PYG{n}{nmemb}\PYG{p}{,} \PYG{n}{size}\PYG{p}{);}
+   \PYG{n}{LOG\PYGZus{}CALLOC}\PYG{p}{(}\PYG{n}{nmemb}\PYG{p}{,} \PYG{n}{size}\PYG{p}{,} \PYG{n}{resultP}\PYG{p}{);}
+   \PYG{k}{if}\PYG{p}{(}\PYG{n}{resultP}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+     \PYG{n}{n\PYGZus{}allocb} \PYG{o}{+=} \PYG{n}{size}\PYG{o}{*}\PYG{n}{nmemb}\PYG{p}{;}
+     \PYG{n}{item} \PYG{o}{*} \PYG{n}{allocated} \PYG{o}{=} \PYG{n}{alloc}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{resultP}\PYG{p}{,} \PYG{n}{nmemb} \PYG{o}{*} \PYG{n}{size}\PYG{p}{);} 
+   \PYG{p}{\PYGZcb{}}
+   \PYG{k}{return} \PYG{n}{resultP}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k+kt}{void} \PYG{o}{*} \PYG{n+nf}{realloc}\PYG{p}{(}\PYG{k+kt}{void} \PYG{o}{*}\PYG{n}{ptr}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{new\PYGZus{}size}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+   \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{resultP} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+   \PYG{k+kt}{int} \PYG{n}{double\PYGZus{}free} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+   \PYG{k+kt}{int} \PYG{n}{illegal\PYGZus{}free} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+   \PYG{n}{n\PYGZus{}realloc}\PYG{o}{++}\PYG{p}{;}
+   \PYG{n}{item} \PYG{o}{*} \PYG{n}{tobedeallocated} \PYG{o}{=} \PYG{n}{find}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{ptr}\PYG{p}{);}
+   \PYG{k}{if}\PYG{p}{(}\PYG{n}{tobedeallocated}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+      \PYG{k}{if}\PYG{p}{(}\PYG{n}{tobedeallocated}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{cnt}\PYG{o}{\PYGZlt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+         \PYG{n}{double\PYGZus{}free} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+	 \PYG{n}{resultP} \PYG{o}{=} \PYG{n}{reallocp}\PYG{p}{(}\PYG{n+nb}{NULL}\PYG{p}{,} \PYG{n}{new\PYGZus{}size}\PYG{p}{);}
+	 \PYG{c+c1}{// LOG\PYGZus{}DOUBLE\PYGZus{}FREE();}
+      \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+         \PYG{n}{n\PYGZus{}freeb} \PYG{o}{+=} \PYG{n}{tobedeallocated}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{;}
+         \PYG{n}{dealloc}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{ptr}\PYG{p}{);}
+         \PYG{n}{resultP} \PYG{o}{=} \PYG{n}{reallocp}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{,} \PYG{n}{new\PYGZus{}size}\PYG{p}{);}
+         \PYG{c+c1}{// LOG\PYGZus{}REALLOC(ptr, new\PYGZus{}size, resultP);}
+      \PYG{p}{\PYGZcb{}}
+   \PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+     \PYG{n}{illegal\PYGZus{}free} \PYG{o}{=} \PYG{l+m+mi}{1}\PYG{p}{;}
+     \PYG{n}{resultP} \PYG{o}{=} \PYG{n}{reallocp}\PYG{p}{(}\PYG{n+nb}{NULL}\PYG{p}{,} \PYG{n}{new\PYGZus{}size}\PYG{p}{);}
+   \PYG{p}{\PYGZcb{}}
+   \PYG{n}{LOG\PYGZus{}REALLOC}\PYG{p}{(}\PYG{n}{ptr}\PYG{p}{,} \PYG{n}{new\PYGZus{}size}\PYG{p}{,} \PYG{n}{resultP}\PYG{p}{);}
+   \PYG{k}{if}\PYG{p}{(}\PYG{n}{resultP}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+      \PYG{n}{n\PYGZus{}allocb} \PYG{o}{+=} \PYG{n}{new\PYGZus{}size}\PYG{p}{;}
+      \PYG{n}{alloc}\PYG{p}{(}\PYG{n}{list}\PYG{p}{,} \PYG{n}{resultP}\PYG{p}{,} \PYG{n}{new\PYGZus{}size}\PYG{p}{);}
+   \PYG{p}{\PYGZcb{}}
+   \PYG{k}{if}\PYG{p}{(}\PYG{n}{double\PYGZus{}free}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+      \PYG{n}{LOG\PYGZus{}DOUBLE\PYGZus{}FREE}\PYG{p}{();}
+   \PYG{p}{\PYGZcb{}}
+   \PYG{k}{if}\PYG{p}{(}\PYG{n}{illegal\PYGZus{}free}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+      \PYG{n}{LOG\PYGZus{}ILL\PYGZus{}FREE}\PYG{p}{();}
+   \PYG{p}{\PYGZcb{}}
+   \PYG{k}{return} \PYG{n}{resultP}\PYG{p}{;} 
+\PYG{p}{\PYGZcb{}}   
+ 
+\PYG{c+c1}{//}
+\PYG{c+c1}{// init \PYGZhy{} this function is called once when the shared library is loaded}
+\PYG{c+c1}{//}
+\PYG{n}{\PYGZus{}\PYGZus{}attribute\PYGZus{}\PYGZus{}}\PYG{p}{((}\PYG{n}{constructor}\PYG{p}{))}
+\PYG{k+kt}{void} \PYG{n}{init}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+  \PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{error}\PYG{p}{;}
+
+  \PYG{n}{LOG\PYGZus{}START}\PYG{p}{();}
+
+  \PYG{c+c1}{// initialize a new list to keep track of all memory (de\PYGZhy{})allocations}
+  \PYG{c+c1}{// (not needed for part 1)}
+  \PYG{n}{list} \PYG{o}{=} \PYG{n}{new\PYGZus{}list}\PYG{p}{();}
+
+  \PYG{c+c1}{// ...}
+  \PYG{n}{mallocp} \PYG{o}{=} \PYG{n}{dlsym}\PYG{p}{(}\PYG{n}{RTLD\PYGZus{}NEXT}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}malloc\PYGZdq{}}\PYG{p}{);}
+  \PYG{k}{if} \PYG{p}{((}\PYG{n}{error} \PYG{o}{=} \PYG{n}{dlerror}\PYG{p}{())} \PYG{o}{!=} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+     \PYG{n}{fputs}\PYG{p}{(}\PYG{n}{error}\PYG{p}{,}\PYG{n}{stderr}\PYG{p}{);}
+     \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{n}{freep} \PYG{o}{=} \PYG{n}{dlsym}\PYG{p}{(}\PYG{n}{RTLD\PYGZus{}NEXT}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}free\PYGZdq{}}\PYG{p}{);}
+  \PYG{k}{if} \PYG{p}{((}\PYG{n}{error} \PYG{o}{=} \PYG{n}{dlerror}\PYG{p}{())} \PYG{o}{!=} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+     \PYG{n}{fputs}\PYG{p}{(}\PYG{n}{error}\PYG{p}{,}\PYG{n}{stderr}\PYG{p}{);}
+     \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+  \PYG{p}{\PYGZcb{}}
+\PYG{n}{callocp} \PYG{o}{=} \PYG{n}{dlsym}\PYG{p}{(}\PYG{n}{RTLD\PYGZus{}NEXT}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}calloc\PYGZdq{}}\PYG{p}{);}
+  \PYG{k}{if} \PYG{p}{((}\PYG{n}{error} \PYG{o}{=} \PYG{n}{dlerror}\PYG{p}{())} \PYG{o}{!=} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+     \PYG{n}{fputs}\PYG{p}{(}\PYG{n}{error}\PYG{p}{,}\PYG{n}{stderr}\PYG{p}{);}
+     \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{n}{reallocp} \PYG{o}{=} \PYG{n}{dlsym}\PYG{p}{(}\PYG{n}{RTLD\PYGZus{}NEXT}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}realloc\PYGZdq{}}\PYG{p}{);}
+  \PYG{k}{if} \PYG{p}{((}\PYG{n}{error} \PYG{o}{=} \PYG{n}{dlerror}\PYG{p}{())} \PYG{o}{!=} \PYG{n+nb}{NULL}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+     \PYG{n}{fputs}\PYG{p}{(}\PYG{n}{error}\PYG{p}{,}\PYG{n}{stderr}\PYG{p}{);}
+     \PYG{n}{exit}\PYG{p}{(}\PYG{l+m+mi}{1}\PYG{p}{);}
+  \PYG{p}{\PYGZcb{}}
+ 
+
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{//}
+\PYG{c+c1}{// fini \PYGZhy{} this function is called once when the shared library is unloaded}
+\PYG{c+c1}{//}
+\PYG{n}{\PYGZus{}\PYGZus{}attribute\PYGZus{}\PYGZus{}}\PYG{p}{((}\PYG{n}{destructor}\PYG{p}{))}
+\PYG{k+kt}{void} \PYG{n}{fini}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+  \PYG{c+c1}{// ...}
+  \PYG{k+kt}{int} \PYG{n}{n} \PYG{o}{=} \PYG{n}{n\PYGZus{}malloc} \PYG{o}{+} \PYG{n}{n\PYGZus{}calloc} \PYG{o}{+} \PYG{n}{n\PYGZus{}realloc}\PYG{p}{;}
+  \PYG{k+kt}{int} \PYG{n}{avg} \PYG{o}{=} \PYG{n}{n}\PYG{o}{?} \PYG{n}{n\PYGZus{}allocb} \PYG{o}{/} \PYG{n+nl}{n} \PYG{p}{:} \PYG{l+m+mi}{0}\PYG{p}{;}
+  \PYG{n}{LOG\PYGZus{}STATISTICS}\PYG{p}{(}\PYG{n}{n\PYGZus{}allocb}\PYG{p}{,} \PYG{n}{avg}\PYG{p}{,} \PYG{n}{n\PYGZus{}freeb}\PYG{p}{);}
+  \PYG{n}{item} \PYG{o}{*} \PYG{n}{i}\PYG{o}{=}\PYG{n}{list}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{next}\PYG{p}{;}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{i} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{cnt} \PYG{o}{\PYGZgt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{n}{LOG\PYGZus{}NONFREED\PYGZus{}START}\PYG{p}{();}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{c+c1}{//LOG\PYGZus{}BLOCK();}
+  \PYG{k}{while}\PYG{p}{(}\PYG{n}{i}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{if}\PYG{p}{(}\PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{cnt} \PYG{o}{\PYGZgt{}}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+       \PYG{n}{LOG\PYGZus{}BLOCK}\PYG{p}{(}\PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{ptr}\PYG{p}{,} \PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{size}\PYG{p}{,} \PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{cnt}\PYG{p}{,} \PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{fname}\PYG{p}{,} \PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{ofs}\PYG{p}{);}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{i}\PYG{o}{=}\PYG{n}{i}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{next}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  
+  \PYG{n}{LOG\PYGZus{}STOP}\PYG{p}{();}
+
+  \PYG{c+c1}{// free list (not needed for part 1)}
+  \PYG{n}{free\PYGZus{}list}\PYG{p}{(}\PYG{n}{list}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+c1}{// ...}
+\end{Verbatim}

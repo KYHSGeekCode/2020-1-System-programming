@@ -1,0 +1,42 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}stdlib.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}define UNW\PYGZus{}LOCAL\PYGZus{}ONLY}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}libunwind.h\PYGZgt{}}
+
+\PYG{k+kt}{int} \PYG{n+nf}{get\PYGZus{}callinfo}\PYG{p}{(}\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{fname}\PYG{p}{,} \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{fnlen}\PYG{p}{,} \PYG{k+kt}{unsigned} \PYG{k+kt}{long} \PYG{k+kt}{long} \PYG{o}{*}\PYG{n}{ofs}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+  \PYG{n}{unw\PYGZus{}context\PYGZus{}t} \PYG{n}{context}\PYG{p}{;}
+  \PYG{n}{unw\PYGZus{}cursor\PYGZus{}t} \PYG{n}{cursor}\PYG{p}{;}
+  \PYG{n}{unw\PYGZus{}word\PYGZus{}t} \PYG{n}{off}\PYG{p}{,} \PYG{n}{ip}\PYG{p}{,} \PYG{n}{sp}\PYG{p}{;}
+  \PYG{n}{unw\PYGZus{}proc\PYGZus{}info\PYGZus{}t} \PYG{n}{pip}\PYG{p}{;}
+  \PYG{k+kt}{char} \PYG{n}{procname}\PYG{p}{[}\PYG{l+m+mi}{256}\PYG{p}{];}
+  \PYG{k+kt}{int} \PYG{n}{ret}\PYG{p}{;}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}getcontext}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{context}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}init\PYGZus{}local}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cursor}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{context}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}step}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cursor}\PYG{p}{)}\PYG{o}{\PYGZlt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}step}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cursor}\PYG{p}{)}\PYG{o}{\PYGZlt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}step}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cursor}\PYG{p}{)}\PYG{o}{\PYGZlt{}=}\PYG{l+m+mi}{0}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}get\PYGZus{}proc\PYGZus{}info}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cursor}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{pip}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{c+c1}{// unw\PYGZus{}get\PYGZus{}reg(\PYGZam{}cursor, UNW\PYGZus{}REG\PYGZus{}IP, \PYGZam{}ip);  }
+  \PYG{c+c1}{// *ofs = ip \PYGZhy{} pip.start\PYGZus{}ip;}
+   
+  \PYG{k}{if}\PYG{p}{(}\PYG{n}{unw\PYGZus{}get\PYGZus{}proc\PYGZus{}name}\PYG{p}{(}\PYG{o}{\PYGZam{}}\PYG{n}{cursor}\PYG{p}{,} \PYG{n}{fname}\PYG{p}{,} \PYG{n}{fnlen}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{off}\PYG{p}{))} \PYG{p}{\PYGZob{}}
+    \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+  \PYG{p}{\PYGZcb{}}
+  \PYG{o}{*}\PYG{n}{ofs} \PYG{o}{=} \PYG{n}{off} \PYG{o}{\PYGZhy{}} \PYG{l+m+mi}{5}\PYG{p}{;} \PYG{c+c1}{//5 is the len of the call instruction}
+  \PYG{c+c1}{//*ofs = off;}
+  \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+\end{Verbatim}

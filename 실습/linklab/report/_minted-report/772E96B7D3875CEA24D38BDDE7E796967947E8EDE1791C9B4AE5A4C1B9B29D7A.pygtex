@@ -1,0 +1,32 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part1\PYGZdl{} make run test3}
+\PYG{g+go}{  cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{[0001] Memory tracer started.}
+\PYG{g+go}{[0002]           (nil) : malloc( 42213 ) = 0x1d51060}
+\PYG{g+go}{[0003]           (nil) : malloc( 22581 ) = 0x1d5b550}
+\PYG{g+go}{[0004]           (nil) : calloc( 1 , 727 ) = 0x1d60d90}
+\PYG{g+go}{[0005]           (nil) : calloc( 1 , 64048 ) = 0x1d61070}
+\PYG{g+go}{[0006]           (nil) : calloc( 1 , 50720 ) = 0x1d70ab0}
+\PYG{g+go}{[0007]           (nil) : malloc( 43080 ) = 0x1d7d0e0}
+\PYG{g+go}{[0008]           (nil) : calloc( 1 , 61740 ) = 0x1d87930}
+\PYG{g+go}{[0009]           (nil) : malloc( 37447 ) = 0x1d96a70}
+\PYG{g+go}{[0010]           (nil) : calloc( 1 , 37103 ) = 0x1d9fcc0}
+\PYG{g+go}{[0011]           (nil) : calloc( 1 , 59380 ) = 0x1da8dc0}
+\PYG{g+go}{[0012]           (nil) : free( 0x1da8dc0 )}
+\PYG{g+go}{[0013]           (nil) : free( 0x1d9fcc0 )}
+\PYG{g+go}{[0014]           (nil) : free( 0x1d96a70 )}
+\PYG{g+go}{[0015]           (nil) : free( 0x1d87930 )}
+\PYG{g+go}{[0016]           (nil) : free( 0x1d7d0e0 )}
+\PYG{g+go}{[0017]           (nil) : free( 0x1d70ab0 )}
+\PYG{g+go}{[0018]           (nil) : free( 0x1d61070 )}
+\PYG{g+go}{[0019]           (nil) : free( 0x1d60d90 )}
+\PYG{g+go}{[0020]           (nil) : free( 0x1d5b550 )}
+\PYG{g+go}{[0021]           (nil) : free( 0x1d51060 )}
+\PYG{g+go}{[0022]}
+\PYG{g+go}{[0023] Statistics}
+\PYG{g+go}{[0024]   allocated\PYGZus{}total      419039}
+\PYG{g+go}{[0025]   allocated\PYGZus{}avg        41903}
+\PYG{g+go}{[0026]   freed\PYGZus{}total          0}
+\PYG{g+go}{[0027]}
+\PYG{g+go}{[0028] Memory tracer stopped.}
+\end{Verbatim}

@@ -1,0 +1,38 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cm}{/* Recommended max cache and object sizes */}
+\PYG{c+cp}{\PYGZsh{}define MAX\PYGZus{}CACHE\PYGZus{}SIZE 1049000}
+\PYG{c+cp}{\PYGZsh{}define MAX\PYGZus{}OBJECT\PYGZus{}SIZE 102400}
+\PYG{c+cp}{\PYGZsh{}define LRU\PYGZus{}HASHMAPSIZE 1024}
+\PYG{k}{struct} \PYG{n}{LRUNode} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{hash}\PYG{p}{;}
+    \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{data}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{size}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{next}\PYG{p}{,}
+                   \PYG{o}{*} \PYG{n}{prev}\PYG{p}{;}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{p}{\PYGZob{}}
+    \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{;}
+    \PYG{k+kt}{int} \PYG{n}{hash}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{next}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{data}\PYG{p}{;} \PYG{c+c1}{// non null}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{p}{\PYGZob{}}
+    \PYG{k+kt}{int} \PYG{n}{totalSize}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{front}\PYG{p}{,} 
+                   \PYG{o}{*} \PYG{n}{rear}\PYG{p}{;}
+    \PYG{k}{struct} \PYG{n}{LRUHashListNode} \PYG{o}{*} \PYG{n}{hashToLRUNode}\PYG{p}{[}\PYG{n}{LRU\PYGZus{}HASHMAPSIZE}\PYG{p}{];}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k+kt}{void} \PYG{n+nf}{initCache}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{freeCache}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{);}
+
+\PYG{k}{struct} \PYG{n}{LRUNode}\PYG{o}{*} \PYG{n+nf}{LRUCache\PYGZus{}get}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{,}  \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{,} \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{metadata}\PYG{p}{);}
+\PYG{k}{struct} \PYG{n}{LRUHashListNode}\PYG{o}{*} \PYG{n+nf}{LRUCache\PYGZus{}Hash\PYGZus{}Get}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{,} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{);}
+\PYG{k+kt}{void} \PYG{n+nf}{LRUCache\PYGZus{}Hash\PYGZus{}Put}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{LRUCache} \PYG{o}{*} \PYG{n}{cache}\PYG{p}{,} \PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{,} \PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n}{newnode}\PYG{p}{);}
+\PYG{k+kt}{int} \PYG{n+nf}{LRUCache\PYGZus{}Hash}\PYG{p}{(}\PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{);}
+
+\PYG{c+c1}{// CALLBACK}
+\PYG{k}{struct} \PYG{n}{LRUNode} \PYG{o}{*} \PYG{n+nf}{createData}\PYG{p}{(}\PYG{k}{const} \PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{key}\PYG{p}{,} \PYG{k+kt}{void} \PYG{o}{*} \PYG{n}{metadata}\PYG{p}{);}
+\end{Verbatim}

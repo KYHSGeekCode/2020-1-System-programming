@@ -1,0 +1,35 @@
+\contentsline {section}{\numberline {1}Introduction}{1}{section.0.1}%
+\contentsline {paragraph}{}{1}{section*.2}%
+\contentsline {paragraph}{}{1}{section*.3}%
+\contentsline {section}{\numberline {2}Part 1: Tracing Dynamic Memory Allocation}{1}{section.0.2}%
+\contentsline {subsection}{\numberline {2.1}테스트 결과}{3}{subsection.0.2.1}%
+\contentsline {subsubsection}{test1}{3}{section*.4}%
+\contentsline {subsubsection}{test2}{3}{section*.5}%
+\contentsline {subsubsection}{test3}{3}{section*.6}%
+\contentsline {subsubsection}{test4}{4}{section*.7}%
+\contentsline {subsubsection}{test5}{5}{section*.8}%
+\contentsline {section}{\numberline {3}Part 2: Tracing Unfreed Memory}{5}{section.0.3}%
+\contentsline {subsection}{\numberline {3.1}테스트 결과}{7}{subsection.0.3.1}%
+\contentsline {subsubsection}{test1}{7}{section*.9}%
+\contentsline {subsubsection}{test2}{7}{section*.10}%
+\contentsline {subsubsection}{test3}{8}{section*.11}%
+\contentsline {subsubsection}{test4}{8}{section*.12}%
+\contentsline {subsubsection}{test5}{10}{section*.13}%
+\contentsline {section}{\numberline {4}Part 3: Pinpointing Call Locations}{10}{section.0.4}%
+\contentsline {subsection}{\numberline {4.1}테스트 결과}{11}{subsection.0.4.1}%
+\contentsline {subsubsection}{test1}{11}{section*.14}%
+\contentsline {subsubsection}{test2}{12}{section*.15}%
+\contentsline {subsubsection}{test3}{13}{section*.16}%
+\contentsline {subsubsection}{test4}{14}{section*.17}%
+\contentsline {subsubsection}{test5}{16}{section*.18}%
+\contentsline {section}{\numberline {5}Bonus: Detect and Ignore Illegal Deallocations}{17}{section.0.5}%
+\contentsline {subsection}{\numberline {5.1}테스트 결과}{18}{subsection.0.5.1}%
+\contentsline {subsubsection}{test4}{18}{section*.19}%
+\contentsline {section}{\numberline {6}Conclusion}{19}{section.0.6}%
+\contentsline {subsection}{\numberline {6.1}어려웠던 점}{19}{subsection.0.6.1}%
+\contentsline {subsubsection}{익숙한 환경의 부재}{19}{section*.20}%
+\contentsline {subsubsection}{libunwind}{19}{section*.21}%
+\contentsline {subsection}{\numberline {6.2}놀라웠던 점}{19}{subsection.0.6.2}%
+\contentsline {subsubsection}{library interpositioning의 간단함}{19}{section*.22}%
+\contentsline {subsubsection}{call이 없는 main과 최적화}{19}{section*.23}%
+\contentsline {subsubsection}{\lstinline {hlt} 인스트럭션}{19}{section*.24}%

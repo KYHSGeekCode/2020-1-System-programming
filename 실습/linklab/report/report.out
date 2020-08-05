@@ -1,0 +1,12 @@
+\BOOKMARK [1][-]{section.0.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.0.2}{Part 1: Tracing Dynamic Memory Allocation}{}% 2
+\BOOKMARK [2][-]{subsection.0.2.1}{... ..}{section.0.2}% 3
+\BOOKMARK [1][-]{section.0.3}{Part 2: Tracing Unfreed Memory}{}% 4
+\BOOKMARK [2][-]{subsection.0.3.1}{... ..}{section.0.3}% 5
+\BOOKMARK [1][-]{section.0.4}{Part 3: Pinpointing Call Locations}{}% 6
+\BOOKMARK [2][-]{subsection.0.4.1}{... ..}{section.0.4}% 7
+\BOOKMARK [1][-]{section.0.5}{Bonus: Detect and Ignore Illegal Deallocations}{}% 8
+\BOOKMARK [2][-]{subsection.0.5.1}{... ..}{section.0.5}% 9
+\BOOKMARK [1][-]{section.0.6}{Conclusion}{}% 10
+\BOOKMARK [2][-]{subsection.0.6.1}{.... .}{section.0.6}% 11
+\BOOKMARK [2][-]{subsection.0.6.2}{.... .}{section.0.6}% 12

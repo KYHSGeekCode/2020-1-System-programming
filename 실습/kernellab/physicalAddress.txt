@@ -1,0 +1,10 @@
+https://stackoverflow.com/questions/6252063/how-to-get-the-physical-address-from-the-logical-one-in-a-linux-kernel-module
+
+https://github.com/torvalds/linux/blob/master/arch/x86/include/asm/pgtable.h
+https://manybutfinite.com/post/how-the-kernel-manages-your-memory/
+https://elixir.bootlin.com/linux/latest/source/include/linux/mm_types.h
+https://slidesplayer.org/slide/14444345/
+https://stackoverflow.com/questions/41090469/linux-kernel-how-to-get-physical-address-memory-management
+http://jake.dothome.co.kr/pt/
+https://www.kernel.org/doc/gorman/html/understand/understand006.html
+https://stackoverflow.com/questions/4201301/warning-left-shift-count-width-of-type

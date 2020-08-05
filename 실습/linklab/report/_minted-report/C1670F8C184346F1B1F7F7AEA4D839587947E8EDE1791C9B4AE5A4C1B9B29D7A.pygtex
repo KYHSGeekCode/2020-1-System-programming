@@ -1,0 +1,32 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part3\PYGZdl{} make run test3}
+\PYG{g+go}{cc \PYGZhy{}I. \PYGZhy{}I ../utils \PYGZhy{}o libmemtrace.so \PYGZhy{}shared \PYGZhy{}fPIC memtrace.c ../utils/memlog.c ../utils/memlist.c callinfo.c \PYGZhy{}ldl \PYGZhy{}lunwind}
+\PYG{g+go}{[0001] Memory tracer started.}
+\PYG{g+go}{[0002]         main:6e : calloc( 1 , 47824 ) = 0x25f3060}
+\PYG{g+go}{[0003]         main:6e : calloc( 1 , 11452 ) = 0x25feb90}
+\PYG{g+go}{[0004]         main:37 : malloc( 10845 ) = 0x26018b0}
+\PYG{g+go}{[0005]         main:6e : calloc( 1 , 32498 ) = 0x2604370}
+\PYG{g+go}{[0006]         main:37 : malloc( 29647 ) = 0x260c2c0}
+\PYG{g+go}{[0007]         main:37 : malloc( 31076 ) = 0x26136f0}
+\PYG{g+go}{[0008]         main:6e : calloc( 1 , 30023 ) = 0x261b0b0}
+\PYG{g+go}{[0009]         main:37 : malloc( 28743 ) = 0x2622650}
+\PYG{g+go}{[0010]         main:37 : malloc( 45171 ) = 0x26296f0}
+\PYG{g+go}{[0011]         main:6e : calloc( 1 , 11093 ) = 0x26347c0}
+\PYG{g+go}{[0012]         main:97 : free( 0x26347c0 )}
+\PYG{g+go}{[0013]         main:97 : free( 0x26296f0 )}
+\PYG{g+go}{[0014]         main:97 : free( 0x2622650 )}
+\PYG{g+go}{[0015]         main:97 : free( 0x261b0b0 )}
+\PYG{g+go}{[0016]         main:97 : free( 0x26136f0 )}
+\PYG{g+go}{[0017]         main:97 : free( 0x260c2c0 )}
+\PYG{g+go}{[0018]         main:97 : free( 0x2604370 )}
+\PYG{g+go}{[0019]         main:97 : free( 0x26018b0 )}
+\PYG{g+go}{[0020]         main:97 : free( 0x25feb90 )}
+\PYG{g+go}{[0021]         main:97 : free( 0x25f3060 )}
+\PYG{g+go}{[0022]}
+\PYG{g+go}{[0023] Statistics}
+\PYG{g+go}{[0024]   allocated\PYGZus{}total      278372}
+\PYG{g+go}{[0025]   allocated\PYGZus{}avg        27837}
+\PYG{g+go}{[0026]   freed\PYGZus{}total          278372}
+\PYG{g+go}{[0027]}
+\PYG{g+go}{[0028] Memory tracer stopped.}
+\end{Verbatim}

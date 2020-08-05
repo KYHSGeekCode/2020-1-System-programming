@@ -1,0 +1,173 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/debugfs.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/kernel.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/module.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/uaccess.h\PYGZgt{}}
+\PYG{c+cp}{\PYGZsh{}include} \PYG{c+cpf}{\PYGZlt{}linux/slab.h\PYGZgt{}}
+
+\PYG{n}{MODULE\PYGZus{}LICENSE}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}GPL\PYGZdq{}}\PYG{p}{);}
+
+\PYG{k}{static} \PYG{k}{struct} \PYG{n}{dentry} \PYG{o}{*}\PYG{n}{dir}\PYG{p}{,} \PYG{o}{*}\PYG{n}{inputdir}\PYG{p}{,} \PYG{o}{*}\PYG{n}{ptreedir}\PYG{p}{;}
+\PYG{k}{static} \PYG{k}{struct} \PYG{n}{task\PYGZus{}struct} \PYG{o}{*}\PYG{n}{curr}\PYG{p}{;}
+
+\PYG{k+kt}{pid\PYGZus{}t}  \PYG{n}{pid}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{oldPid} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{buffer} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+\PYG{k+kt}{int} \PYG{n}{buflen}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{k}{static} \PYG{k+kt}{ssize\PYGZus{}t} \PYG{n+nf}{write\PYGZus{}pid\PYGZus{}to\PYGZus{}input}\PYG{p}{(}\PYG{k}{struct} \PYG{n}{file} \PYG{o}{*}\PYG{n}{fp}\PYG{p}{,} 
+                                \PYG{k+kt}{char} \PYG{n}{\PYGZus{}\PYGZus{}user} \PYG{o}{*}\PYG{n}{user\PYGZus{}buffer}\PYG{p}{,} 
+                                \PYG{k+kt}{size\PYGZus{}t} \PYG{n}{length}\PYG{p}{,} 
+                                \PYG{n}{loff\PYGZus{}t} \PYG{o}{*}\PYG{n}{position}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//	printk(\PYGZdq{}ptree: write\PYGZus{}pid\PYGZus{}to input called length \PYGZpc{}zu position \PYGZpc{}lld with pid \PYGZpc{}ld\PYGZbs{}n\PYGZdq{}, length, *position, (long)pid);}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{pid} \PYG{o}{!=} \PYG{n}{oldPid}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{oldPid} \PYG{o}{=} \PYG{n}{pid}\PYG{p}{;}
+		\PYG{k}{if}\PYG{p}{(}\PYG{n}{buffer}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+			\PYG{n}{kfree}\PYG{p}{(}\PYG{n}{buffer}\PYG{p}{);}
+		\PYG{p}{\PYGZcb{}}
+		\PYG{n}{buffer} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;} \PYG{c+c1}{// Invalidate cache}
+	\PYG{p}{\PYGZcb{}}
+    \PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{input\PYGZus{}pid} \PYG{o}{=} \PYG{n}{pid}\PYG{p}{;}
+    \PYG{c+c1}{//sscanf(user\PYGZus{}buffer, \PYGZdq{}\PYGZpc{}u\PYGZdq{}, \PYGZam{}input\PYGZus{}pid);}
+    \PYG{k}{struct} \PYG{n}{pid} \PYG{o}{*} \PYG{n}{pid\PYGZus{}struct} \PYG{o}{=} \PYG{n}{find\PYGZus{}get\PYGZus{}pid}\PYG{p}{(}\PYG{n}{input\PYGZus{}pid}\PYG{p}{);}
+	\PYG{n}{curr} \PYG{o}{=} \PYG{n}{pid\PYGZus{}task}\PYG{p}{(}\PYG{n}{pid\PYGZus{}struct}\PYG{p}{,} \PYG{n}{PIDTYPE\PYGZus{}PID}\PYG{p}{);} \PYG{c+c1}{// Find task\PYGZus{}struct using input\PYGZus{}pid. Hint: pid\PYGZus{}task}
+	\PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{curr}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Curr is null}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+		\PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{buffer}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+\PYG{c+c1}{//			printk(\PYGZdq{}ptree: buffer is null\PYGZbs{}n\PYGZdq{});}
+			\PYG{k+kt}{int} \PYG{n}{needed} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+			\PYG{k}{struct} \PYG{n}{task\PYGZus{}struct} \PYG{o}{*} \PYG{n}{iter} \PYG{o}{=} \PYG{n}{curr}\PYG{p}{;}
+			\PYG{k+kt}{int} \PYG{n}{count} \PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{;}
+			\PYG{k}{while}\PYG{p}{(}\PYG{n}{iter}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+				\PYG{n}{count}\PYG{o}{++}\PYG{p}{;}	
+				\PYG{k}{if}\PYG{p}{(}\PYG{n}{iter} \PYG{o}{!=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid} \PYG{o}{!=} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+					\PYG{n}{iter} \PYG{o}{=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent}\PYG{p}{;}
+				\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+					\PYG{k}{break}\PYG{p}{;}
+				\PYG{p}{\PYGZcb{}}
+			\PYG{p}{\PYGZcb{}}
+\PYG{c+c1}{//			printk(\PYGZdq{}ptree: count=\PYGZpc{}d\PYGZbs{}n\PYGZdq{}, count);}
+			\PYG{k+kt}{int} \PYG{o}{*}\PYG{n}{lens} \PYG{o}{=} \PYG{n}{kmalloc}\PYG{p}{(}\PYG{n}{count}\PYG{o}{*}\PYG{k}{sizeof}\PYG{p}{(}\PYG{k+kt}{int}\PYG{p}{),} \PYG{n}{GFP\PYGZus{}KERNEL}\PYG{p}{);}
+			\PYG{k+kt}{int} \PYG{n}{lenindex} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+			\PYG{n}{iter} \PYG{o}{=} \PYG{n}{curr}\PYG{p}{;}
+			\PYG{k}{while}\PYG{p}{(}\PYG{n}{iter}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+				\PYG{k+kt}{char} \PYG{n}{tcomm}\PYG{p}{[}\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{comm}\PYG{p}{)];}
+				\PYG{n}{get\PYGZus{}task\PYGZus{}comm}\PYG{p}{(}\PYG{n}{tcomm}\PYG{p}{,} \PYG{n}{iter}\PYG{p}{);}
+				\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{thepid} \PYG{o}{=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid}\PYG{p}{;}
+				\PYG{n}{lens}\PYG{p}{[}\PYG{n}{lenindex}\PYG{p}{]} \PYG{o}{=} \PYG{n}{snprintf}\PYG{p}{(}\PYG{n+nb}{NULL}\PYG{p}{,}\PYG{l+m+mi}{0}\PYG{p}{,}\PYG{l+s}{\PYGZdq{}\PYGZpc{}s (\PYGZpc{}ld)}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{tcomm}\PYG{p}{,} \PYG{p}{(}\PYG{k+kt}{long}\PYG{p}{)}\PYG{n}{thepid}\PYG{p}{);}
+				\PYG{n}{needed} \PYG{o}{+=} \PYG{n}{lens}\PYG{p}{[}\PYG{n}{lenindex}\PYG{p}{];}
+				\PYG{n}{lenindex}\PYG{o}{++}\PYG{p}{;}
+\PYG{c+c1}{//				printk(\PYGZdq{}ptree: first: \PYGZpc{}s (\PYGZpc{}ld), needed = \PYGZpc{}d \PYGZbs{}n\PYGZdq{}, tcomm,(long) thepid, needed);}
+				\PYG{k}{if}\PYG{p}{(}\PYG{n}{iter} \PYG{o}{!=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid} \PYG{o}{!=} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+					\PYG{n}{iter} \PYG{o}{=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent}\PYG{p}{;}
+				\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+					\PYG{k}{break}\PYG{p}{;}
+				\PYG{p}{\PYGZcb{}}
+			\PYG{p}{\PYGZcb{}}
+			\PYG{n}{needed}\PYG{o}{++}\PYG{p}{;}
+\PYG{c+c1}{//			printk(\PYGZdq{}Needed: \PYGZpc{}d\PYGZbs{}n\PYGZdq{}, needed);}
+			\PYG{n}{buffer} \PYG{o}{=} \PYG{n}{kmalloc}\PYG{p}{(}\PYG{n}{needed}\PYG{p}{,} \PYG{n}{GFP\PYGZus{}KERNEL}\PYG{p}{);}
+			\PYG{k}{if}\PYG{p}{(}\PYG{o}{!}\PYG{n}{buffer}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+				\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Failed to allocate space\PYGZdq{}}\PYG{p}{);}
+				\PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+			\PYG{p}{\PYGZcb{}}
+			\PYG{k+kt}{char} \PYG{o}{*}\PYG{n}{offsetBuf} \PYG{o}{=} \PYG{n}{buffer} \PYG{o}{+} \PYG{n}{needed}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+			\PYG{n}{iter} \PYG{o}{=} \PYG{n}{curr}\PYG{p}{;}
+			\PYG{n}{lenindex} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+			\PYG{k}{while}\PYG{p}{(}\PYG{n}{iter}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+				\PYG{k+kt}{char} \PYG{n}{tcomm}\PYG{p}{[}\PYG{k}{sizeof}\PYG{p}{(}\PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{comm}\PYG{p}{)];}
+				\PYG{n}{get\PYGZus{}task\PYGZus{}comm}\PYG{p}{(}\PYG{n}{tcomm}\PYG{p}{,} \PYG{n}{iter}\PYG{p}{);}
+				\PYG{k+kt}{pid\PYGZus{}t} \PYG{n}{thepid} \PYG{o}{=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid}\PYG{p}{;}
+				\PYG{c+c1}{//char tmp = offsetBuf[0];}
+				\PYG{n}{offsetBuf} \PYG{o}{\PYGZhy{}=} \PYG{n}{lens}\PYG{p}{[}\PYG{n}{lenindex}\PYG{p}{];}
+				\PYG{k+kt}{char} \PYG{o}{*} \PYG{n}{tempStr} \PYG{o}{=} \PYG{n}{kmalloc}\PYG{p}{(}\PYG{n}{lens}\PYG{p}{[}\PYG{n}{lenindex}\PYG{p}{]}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{n}{GFP\PYGZus{}KERNEL}\PYG{p}{);}
+				\PYG{n}{snprintf}\PYG{p}{(}\PYG{n}{tempStr}\PYG{p}{,} \PYG{n}{lens}\PYG{p}{[}\PYG{n}{lenindex}\PYG{p}{]}\PYG{o}{+}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+s}{\PYGZdq{}\PYGZpc{}s (\PYGZpc{}ld)}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{,} \PYG{n}{tcomm}\PYG{p}{,} \PYG{p}{(}\PYG{k+kt}{long}\PYG{p}{)}\PYG{n}{thepid}\PYG{p}{);}
+				\PYG{n}{memcpy}\PYG{p}{(}\PYG{n}{offsetBuf}\PYG{p}{,} \PYG{n}{tempStr}\PYG{p}{,} \PYG{n}{lens}\PYG{p}{[}\PYG{n}{lenindex}\PYG{p}{]);}
+				\PYG{n}{kfree}\PYG{p}{(}\PYG{n}{tempStr}\PYG{p}{);} 
+				\PYG{c+c1}{//snprintf(offsetBuf, lens[lenindex]+1, \PYGZdq{}\PYGZpc{}s (\PYGZpc{}ld)\PYGZbs{}n\PYGZdq{}, tcomm, (long)thepid);}
+				\PYG{c+c1}{//offsetBuf[lens[lenindex]] = tmp;}
+				\PYG{n}{lenindex}\PYG{o}{++}\PYG{p}{;} 
+				\PYG{k}{if}\PYG{p}{(}\PYG{n}{iter} \PYG{o}{!=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent} \PYG{o}{\PYGZam{}\PYGZam{}} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{pid} \PYG{o}{!=} \PYG{l+m+mi}{1}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+					\PYG{n}{iter} \PYG{o}{=} \PYG{n}{iter}\PYG{o}{\PYGZhy{}\PYGZgt{}}\PYG{n}{parent}\PYG{p}{;}
+				\PYG{p}{\PYGZcb{}} \PYG{k}{else} \PYG{p}{\PYGZob{}}
+					\PYG{k}{break}\PYG{p}{;}
+				\PYG{p}{\PYGZcb{}}
+			\PYG{p}{\PYGZcb{}}
+			\PYG{n}{kfree}\PYG{p}{(}\PYG{n}{lens}\PYG{p}{);}
+			\PYG{n}{buffer}\PYG{p}{[}\PYG{n}{needed}\PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{]} \PYG{o}{=} \PYG{l+s+sc}{\PYGZsq{}\PYGZbs{}0\PYGZsq{}}\PYG{p}{;}
+			\PYG{o}{*}\PYG{n}{position} \PYG{o}{=} \PYG{l+m+mi}{0}\PYG{p}{;}
+			\PYG{n}{buflen} \PYG{o}{=} \PYG{n}{needed}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{k+kt}{int} \PYG{n}{left}  \PYG{o}{=} \PYG{n}{buflen} \PYG{o}{\PYGZhy{}} \PYG{o}{*}\PYG{n}{position}\PYG{p}{;}
+	\PYG{k+kt}{int} \PYG{n}{tocopy} \PYG{o}{=} \PYG{n}{left} \PYG{o}{\PYGZlt{}} \PYG{n}{length}\PYG{o}{?} \PYG{n+nl}{left}\PYG{p}{:} \PYG{n}{length}\PYG{p}{;}
+	\PYG{k+kt}{int} \PYG{n}{notcopied} \PYG{o}{=} \PYG{n}{copy\PYGZus{}to\PYGZus{}user}\PYG{p}{(}\PYG{n}{user\PYGZus{}buffer}\PYG{p}{,} \PYG{n}{buffer} \PYG{o}{+} \PYG{o}{*}\PYG{n}{position}\PYG{p}{,} \PYG{n}{tocopy}\PYG{p}{);}
+	\PYG{k+kt}{int} \PYG{n}{copied} \PYG{o}{=} \PYG{n}{tocopy}\PYG{o}{\PYGZhy{}}\PYG{n}{notcopied}\PYG{p}{;}
+	\PYG{o}{*}\PYG{n}{position}\PYG{o}{+=}\PYG{n}{copied}\PYG{p}{;}
+\PYG{c+c1}{//	printk(\PYGZdq{}ptree: left \PYGZpc{}d tocopy \PYGZpc{}d notcopied \PYGZpc{}d copied \PYGZpc{}d position \PYGZpc{}lld\PYGZbs{}n\PYGZdq{}, left,tocopy,notcopied,copied, *position);}
+    \PYG{c+c1}{// Tracing process tree from input\PYGZus{}pid to init(1) process}
+    \PYG{c+c1}{// Make Output Format string: process\PYGZus{}command (process\PYGZus{}id)}
+    \PYG{k}{return} \PYG{n}{copied}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{c+cm}{/*}
+\PYG{c+cm}{static ssize\PYGZus{}t read\PYGZus{}op(struct file * fp,}
+\PYG{c+cm}{			const char \PYGZus{}\PYGZus{}user *user\PYGZus{}buffer,}
+\PYG{c+cm}{			size\PYGZus{}t length,}
+\PYG{c+cm}{			loff\PYGZus{}t *position)}
+\PYG{c+cm}{\PYGZob{}}
+\PYG{c+cm}{		}
+\PYG{c+cm}{	;}
+\PYG{c+cm}{	return 0;}
+\PYG{c+cm}{\PYGZcb{}}
+\PYG{c+cm}{*/}
+
+\PYG{k}{static} \PYG{k}{const} \PYG{k}{struct} \PYG{n}{file\PYGZus{}operations} \PYG{n}{dbfs\PYGZus{}fops} \PYG{o}{=} \PYG{p}{\PYGZob{}}
+        \PYG{p}{.}\PYG{n}{read} \PYG{o}{=} \PYG{n}{write\PYGZus{}pid\PYGZus{}to\PYGZus{}input}\PYG{p}{,}
+	\PYG{c+c1}{//	.read = read\PYGZus{}op,}
+\PYG{p}{\PYGZcb{};}
+
+\PYG{k}{static} \PYG{k+kt}{int} \PYG{n}{\PYGZus{}\PYGZus{}init} \PYG{n+nf}{dbfs\PYGZus{}module\PYGZus{}init}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{// Implement init module code}
+
+    \PYG{n}{dir} \PYG{o}{=} \PYG{n}{debugfs\PYGZus{}create\PYGZus{}dir}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}ptree\PYGZdq{}}\PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{);}
+        
+    \PYG{k}{if} \PYG{p}{(}\PYG{o}{!}\PYG{n}{dir}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Cannot create ptree dir}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+        \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+
+    \PYG{n}{inputdir} \PYG{o}{=} \PYG{n}{debugfs\PYGZus{}create\PYGZus{}u32}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}input\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mo}{0666}\PYG{p}{,} \PYG{n}{dir}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{pid}\PYG{p}{);}
+	
+    \PYG{k}{if} \PYG{p}{(}\PYG{o}{!}\PYG{n}{inputdir}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Cannot create input file}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+        \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+    \PYG{n}{ptreedir} \PYG{o}{=} \PYG{n}{debugfs\PYGZus{}create\PYGZus{}file}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}ptree\PYGZdq{}}\PYG{p}{,} \PYG{l+m+mo}{0444} \PYG{p}{,} \PYG{n}{dir} \PYG{p}{,} \PYG{n+nb}{NULL}\PYG{p}{,} \PYG{o}{\PYGZam{}}\PYG{n}{dbfs\PYGZus{}fops}\PYG{p}{);} \PYG{c+c1}{// Find suitable debugfs API}
+	
+    \PYG{k}{if} \PYG{p}{(}\PYG{o}{!}\PYG{n}{ptreedir}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+        \PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}Cannot create ptree file}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+        \PYG{k}{return} \PYG{o}{\PYGZhy{}}\PYG{l+m+mi}{1}\PYG{p}{;}
+    \PYG{p}{\PYGZcb{}}
+	
+	\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}dbfs\PYGZus{}ptree module initialize done}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+
+    \PYG{k}{return} \PYG{l+m+mi}{0}\PYG{p}{;}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{k}{static} \PYG{k+kt}{void} \PYG{n}{\PYGZus{}\PYGZus{}exit} \PYG{n+nf}{dbfs\PYGZus{}module\PYGZus{}exit}\PYG{p}{(}\PYG{k+kt}{void}\PYG{p}{)}
+\PYG{p}{\PYGZob{}}
+    \PYG{c+c1}{// Implement exit module code}
+	\PYG{k}{if}\PYG{p}{(}\PYG{n}{buffer}\PYG{p}{)} \PYG{p}{\PYGZob{}}
+		\PYG{n}{kfree}\PYG{p}{(}\PYG{n}{buffer}\PYG{p}{);}
+		\PYG{n}{buffer} \PYG{o}{=} \PYG{n+nb}{NULL}\PYG{p}{;}
+	\PYG{p}{\PYGZcb{}}
+	\PYG{n}{debugfs\PYGZus{}remove\PYGZus{}recursive}\PYG{p}{(}\PYG{n}{dir}\PYG{p}{);}
+	\PYG{n}{printk}\PYG{p}{(}\PYG{l+s}{\PYGZdq{}dbfs\PYGZus{}ptree module exit}\PYG{l+s+se}{\PYGZbs{}n}\PYG{l+s}{\PYGZdq{}}\PYG{p}{);}
+\PYG{p}{\PYGZcb{}}
+
+\PYG{n}{module\PYGZus{}init}\PYG{p}{(}\PYG{n}{dbfs\PYGZus{}module\PYGZus{}init}\PYG{p}{);}
+\PYG{n}{module\PYGZus{}exit}\PYG{p}{(}\PYG{n}{dbfs\PYGZus{}module\PYGZus{}exit}\PYG{p}{);}
+\end{Verbatim}

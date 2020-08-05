@@ -1,0 +1,69 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{g+go}{  user102@SystemProgramming:\PYGZti{}/handout/part3\PYGZdl{} objdump \PYGZhy{}d ../test/test3}
+\PYG{g+go}{  (중략)}
+\PYG{g+go}{  Disassembly of section .text:}
+
+\PYG{g+go}{0000000000400600 \PYGZlt{}main\PYGZgt{}:}
+\PYG{g+go}{  400600:       41 54                   push   \PYGZpc{}r12}
+\PYG{g+go}{  400602:       55                      push   \PYGZpc{}rbp}
+\PYG{g+go}{  400603:       31 ff                   xor    \PYGZpc{}edi,\PYGZpc{}edi}
+\PYG{g+go}{  400605:       53                      push   \PYGZpc{}rbx}
+\PYG{g+go}{  400606:       48 83 ec 60             sub    \PYGZdl{}0x60,\PYGZpc{}rsp}
+\PYG{g+go}{  40060a:       64 48 8b 04 25 28 00    mov    \PYGZpc{}fs:0x28,\PYGZpc{}rax}
+\PYG{g+go}{  400611:       00 00}
+\PYG{g+go}{  400613:       48 89 44 24 58          mov    \PYGZpc{}rax,0x58(\PYGZpc{}rsp)}
+\PYG{g+go}{  400618:       31 c0                   xor    \PYGZpc{}eax,\PYGZpc{}eax}
+\PYG{g+go}{  40061a:       e8 a1 ff ff ff          callq  4005c0 \PYGZlt{}time@plt\PYGZgt{}}
+\PYG{g+go}{  40061f:       89 c7                   mov    \PYGZpc{}eax,\PYGZpc{}edi}
+\PYG{g+go}{  400621:       48 89 e3                mov    \PYGZpc{}rsp,\PYGZpc{}rbx}
+\PYG{g+go}{  400624:       48 8d 6c 24 50          lea    0x50(\PYGZpc{}rsp),\PYGZpc{}rbp}
+\PYG{g+go}{  400629:       e8 72 ff ff ff          callq  4005a0 \PYGZlt{}srand@plt\PYGZgt{}}
+\PYG{g+go}{  40062e:       eb 15                   jmp    400645 \PYGZlt{}main+0x45\PYGZgt{}}
+\PYG{g+go}{  400630:       4c 89 e7                mov    \PYGZpc{}r12,\PYGZpc{}rdi}
+\PYG{g+go}{  400633:       48 83 c3 08             add    \PYGZdl{}0x8,\PYGZpc{}rbx}
+\PYG{g+go}{  400637:       e8 94 ff ff ff          callq  4005d0 \PYGZlt{}malloc@plt\PYGZgt{}}
+\PYG{g+go}{  40063c:       48 89 43 f8             mov    \PYGZpc{}rax,\PYGZhy{}0x8(\PYGZpc{}rbx)}
+\PYG{g+go}{  400640:       48 39 eb                cmp    \PYGZpc{}rbp,\PYGZpc{}rbx}
+\PYG{g+go}{  400643:       74 37                   je     40067c \PYGZlt{}main+0x7c\PYGZgt{}}
+\PYG{g+go}{  400645:       e8 96 ff ff ff          callq  4005e0 \PYGZlt{}rand@plt\PYGZgt{}}
+\PYG{g+go}{  40064a:       99                      cltd}
+\PYG{g+go}{  40064b:       c1 ea 10                shr    \PYGZdl{}0x10,\PYGZpc{}edx}
+\PYG{g+go}{  40064e:       8d 34 10                lea    (\PYGZpc{}rax,\PYGZpc{}rdx,1),\PYGZpc{}esi}
+\PYG{g+go}{  400651:       0f b7 f6                movzwl \PYGZpc{}si,\PYGZpc{}esi}
+\PYG{g+go}{  400654:       29 d6                   sub    \PYGZpc{}edx,\PYGZpc{}esi}
+\PYG{g+go}{  400656:       4c 63 e6                movslq \PYGZpc{}esi,\PYGZpc{}r12}
+\PYG{g+go}{  400659:       e8 82 ff ff ff          callq  4005e0 \PYGZlt{}rand@plt\PYGZgt{}}
+\PYG{g+go}{  40065e:       a8 01                   test   \PYGZdl{}0x1,\PYGZpc{}al}
+\PYG{g+go}{  400660:       75 ce                   jne    400630 \PYGZlt{}main+0x30\PYGZgt{}}
+\PYG{g+go}{  400662:       4c 89 e6                mov    \PYGZpc{}r12,\PYGZpc{}rsi}
+\PYG{g+go}{  400665:       bf 01 00 00 00          mov    \PYGZdl{}0x1,\PYGZpc{}edi}
+\PYG{g+go}{  40066a:       48 83 c3 08             add    \PYGZdl{}0x8,\PYGZpc{}rbx}
+\PYG{g+go}{  40066e:       e8 3d ff ff ff          callq  4005b0 \PYGZlt{}calloc@plt\PYGZgt{}}
+\PYG{g+go}{  400673:       48 89 43 f8             mov    \PYGZpc{}rax,\PYGZhy{}0x8(\PYGZpc{}rbx)}
+\PYG{g+go}{  400677:       48 39 eb                cmp    \PYGZpc{}rbp,\PYGZpc{}rbx}
+\PYG{g+go}{  40067a:       75 c9                   jne    400645 \PYGZlt{}main+0x45\PYGZgt{}}
+\PYG{g+go}{  40067c:       48 8d 5c 24 48          lea    0x48(\PYGZpc{}rsp),\PYGZpc{}rbx}
+\PYG{g+go}{  400681:       48 8d 6c 24 f8          lea    \PYGZhy{}0x8(\PYGZpc{}rsp),\PYGZpc{}rbp}
+\PYG{g+go}{  400686:       66 2e 0f 1f 84 00 00    nopw   \PYGZpc{}cs:0x0(\PYGZpc{}rax,\PYGZpc{}rax,1)}
+\PYG{g+go}{  40068d:       00 00 00}
+\PYG{g+go}{  400690:       48 8b 3b                mov    (\PYGZpc{}rbx),\PYGZpc{}rdi}
+\PYG{g+go}{  400693:       48 83 eb 08             sub    \PYGZdl{}0x8,\PYGZpc{}rbx}
+\PYG{g+go}{  400697:       e8 d4 fe ff ff          callq  400570 \PYGZlt{}free@plt\PYGZgt{}}
+\PYG{g+go}{  40069c:       48 39 eb                cmp    \PYGZpc{}rbp,\PYGZpc{}rbx}
+\PYG{g+go}{  40069f:       75 ef                   jne    400690 \PYGZlt{}main+0x90\PYGZgt{}}
+\PYG{g+go}{  4006a1:       31 c0                   xor    \PYGZpc{}eax,\PYGZpc{}eax}
+\PYG{g+go}{  4006a3:       48 8b 4c 24 58          mov    0x58(\PYGZpc{}rsp),\PYGZpc{}rcx}
+\PYG{g+go}{  4006a8:       64 48 33 0c 25 28 00    xor    \PYGZpc{}fs:0x28,\PYGZpc{}rcx}
+\PYG{g+go}{  4006af:       00 00}
+\PYG{g+go}{  4006b1:       75 09                   jne    4006bc \PYGZlt{}main+0xbc\PYGZgt{}}
+\PYG{g+go}{  4006b3:       48 83 c4 60             add    \PYGZdl{}0x60,\PYGZpc{}rsp}
+\PYG{g+go}{  4006b7:       5b                      pop    \PYGZpc{}rbx}
+\PYG{g+go}{  4006b8:       5d                      pop    \PYGZpc{}rbp}
+\PYG{g+go}{  4006b9:       41 5c                   pop    \PYGZpc{}r12}
+\PYG{g+go}{  4006bb:       c3                      retq}
+\PYG{g+go}{  4006bc:       e8 bf fe ff ff          callq  400580 \PYGZlt{}\PYGZus{}\PYGZus{}stack\PYGZus{}chk\PYGZus{}fail@plt\PYGZgt{}}
+\PYG{g+go}{  4006c1:       66 2e 0f 1f 84 00 00    nopw   \PYGZpc{}cs:0x0(\PYGZpc{}rax,\PYGZpc{}rax,1)}
+\PYG{g+go}{  4006c8:       00 00 00}
+\PYG{g+go}{  4006cb:       0f 1f 44 00 00          nopl   0x0(\PYGZpc{}rax,\PYGZpc{}rax,1)}
+\PYG{g+go}{  (후략)}
+\end{Verbatim}

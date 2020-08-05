@@ -1,0 +1,20 @@
+\BOOKMARK [1][-]{section.0.1}{Introduction}{}% 1
+\BOOKMARK [1][-]{section.0.2}{Step 1: ..}{}% 2
+\BOOKMARK [2][-]{subsection.0.2.1}{... ... ..}{section.0.2}% 3
+\BOOKMARK [2][-]{subsection.0.2.2}{.... ... ..}{section.0.2}% 4
+\BOOKMARK [1][-]{section.0.3}{Step 2: ... ... ..}{}% 5
+\BOOKMARK [2][-]{subsection.0.3.1}{malloc. ..}{section.0.3}% 6
+\BOOKMARK [2][-]{subsection.0.3.2}{free. ..}{section.0.3}% 7
+\BOOKMARK [2][-]{subsection.0.3.3}{realloc. ..}{section.0.3}% 8
+\BOOKMARK [2][-]{subsection.0.3.4}{coalescing. ..}{section.0.3}% 9
+\BOOKMARK [2][-]{subsection.0.3.5}{mmcheck. ..}{section.0.3}% 10
+\BOOKMARK [1][-]{section.0.4}{Step 3: .... ... ... ..}{}% 11
+\BOOKMARK [2][-]{subsection.0.4.1}{... ...}{section.0.4}% 12
+\BOOKMARK [2][-]{subsection.0.4.2}{malloc. ..}{section.0.4}% 13
+\BOOKMARK [2][-]{subsection.0.4.3}{free. ..}{section.0.4}% 14
+\BOOKMARK [2][-]{subsection.0.4.4}{realloc. ..}{section.0.4}% 15
+\BOOKMARK [2][-]{subsection.0.4.5}{coalescing. ..}{section.0.4}% 16
+\BOOKMARK [2][-]{subsection.0.4.6}{mmcheck. ..}{section.0.4}% 17
+\BOOKMARK [1][-]{section.0.5}{Conclusion}{}% 18
+\BOOKMARK [2][-]{subsection.0.5.1}{.... .}{section.0.5}% 19
+\BOOKMARK [2][-]{subsection.0.5.2}{.... .}{section.0.5}% 20

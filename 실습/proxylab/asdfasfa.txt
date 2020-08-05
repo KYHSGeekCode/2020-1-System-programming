@@ -1,0 +1,210 @@
+==135== Thread 3:
+==135== Invalid read of size 8
+==135==    at 0x10B06A: execRequest_Cached (proxy.c:243)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Address 0x4a3dc78 is 8 bytes inside a block of size 40 free'd
+==135==    at 0x48379AB: free (vg_replace_malloc.c:540)
+==135==    by 0x10D8C8: LRUCache_get (lrucache.c:101)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Block was alloc'd at
+==135==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==135==    by 0x10A8B3: createData (proxy.c:104)
+==135==    by 0x10D70D: LRUCache_get (lrucache.c:60)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==
+==135== Invalid read of size 4
+==135==    at 0x10B076: execRequest_Cached (proxy.c:244)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Address 0x4a3dc80 is 16 bytes inside a block of size 40 free'd
+==135==    at 0x48379AB: free (vg_replace_malloc.c:540)
+==135==    by 0x10D8C8: LRUCache_get (lrucache.c:101)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Block was alloc'd at
+==135==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==135==    by 0x10A8B3: createData (proxy.c:104)
+==135==    by 0x10D70D: LRUCache_get (lrucache.c:60)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==
+execRequest done
+==135== Syscall param write(buf) points to unaddressable byte(s)
+==135==    at 0x4865E0F: __libc_write (write.c:26)
+==135==    by 0x4865E0F: write (write.c:24)
+==135==    by 0x10CD56: rio_writen (csapp.c:771)
+==135==    by 0x10D05B: Rio_writen (csapp.c:899)
+==135==    by 0x10B727: replyRequest (proxy.c:351)
+==135==    by 0x10A9E1: doProxy (proxy.c:128)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Address 0x8273040 is 0 bytes inside an unallocated block of size 2,457,728 in arena "client"
+==135==
+replyRequest done
+doProxy about to return
+DoProxy done
+Accepted connection from (localhost, 9420)
+line: GET http://httpbin.org/spec.json HTTP/1.1
+uri: http://httpbin.org/spec.json, version: HTTP/1.1
+
+line: Host: httpbin.org
+line: User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0
+line: Accept: */*
+line: Accept-Language: en-US,en;q=0.5
+line: Accept-Encoding: gzip, deflate
+line: Referer: http://httpbin.org/
+line: Connection: keep-alive
+line:
+Last buf:
+
+Parse request done
+execRequest_Cached calledCreateData called
+Hostname: httpbin.org has_host: 1 host: httpbin.org
+GuessPortFromURI uri:http://httpbin.org/spec.json
+Port: 80
+Requesting...
+Reading
+n:8192
+n:8192
+n:8192
+n:8192
+n:8192
+n:316
+total N: 41276
+==135== Thread 2:
+==135== Invalid write of size 8
+==135==    at 0x10D765: LRUCache_get (lrucache.c:66)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Address 0x4a3dc90 is 32 bytes inside a block of size 40 free'd
+==135==    at 0x48379AB: free (vg_replace_malloc.c:540)
+==135==    by 0x10D8C8: LRUCache_get (lrucache.c:101)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==  Block was alloc'd at
+==135==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==135==    by 0x10A8B3: createData (proxy.c:104)
+==135==    by 0x10D70D: LRUCache_get (lrucache.c:60)
+==135==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==135==    by 0x10A9C4: doProxy (proxy.c:126)
+==135==    by 0x10A855: proxy_thread (proxy.c:93)
+==135==    by 0x485BF26: start_thread (pthread_create.c:479)
+==135==    by 0x497131E: clone (clone.S:95)
+==135==
+execRequest done
+replyRequest done
+doProxy about to return
+DoProxy done
+
+==107== Thread 3:
+==107== Invalid write of size 8
+==107==    at 0x10D81E: LRUCache_get (lrucache.c:85)
+==107==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==107==    by 0x10A9C4: doProxy (proxy.c:126)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==  Address 0x10 is not stack'd, malloc'd or (recently) free'd
+==107==
+==107==
+==107== Process terminating with default action of signal 11 (SIGSEGV)
+==107==  Access not within mapped region at address 0x10
+==107==    at 0x10D81E: LRUCache_get (lrucache.c:85)
+==107==    by 0x10B061: execRequest_Cached (proxy.c:241)
+==107==    by 0x10A9C4: doProxy (proxy.c:126)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==  If you believe this happened as a result of a stack
+==107==  overflow in your program's main thread (unlikely but
+==107==  possible), you can try to increase the size of the
+==107==  main thread stack using the --main-stacksize= flag.
+==107==  The main thread stack size used in this run was 8388608.
+==107==
+==107== HEAP SUMMARY:
+==107==     in use at exit: 1,596,628 bytes in 52 blocks
+==107==   total heap usage: 577 allocs, 525 frees, 127,768,341 bytes allocated
+==107==
+==107== Thread 1:
+==107== 4 bytes in 1 blocks are still reachable in loss record 1 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==107==    by 0x490171A: strdup (strdup.c:42)
+==107==    by 0x10AC21: parseRequest (proxy.c:176)
+==107==    by 0x10A939: doProxy (proxy.c:119)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==
+==107== 6 bytes in 1 blocks are still reachable in loss record 2 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==107==    by 0x490171A: strdup (strdup.c:42)
+==107==    by 0x10AD00: parseRequest (proxy.c:188)
+==107==    by 0x10A939: doProxy (proxy.c:119)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==
+==107== 11 bytes in 1 blocks are still reachable in loss record 3 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==107==    by 0x490171A: strdup (strdup.c:42)
+==107==    by 0x10AC0E: parseRequest (proxy.c:175)
+==107==    by 0x10A939: doProxy (proxy.c:119)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==
+==107== 12 bytes in 1 blocks are still reachable in loss record 4 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==107==    by 0x490171A: strdup (strdup.c:42)
+==107==    by 0x10ADEE: parseRequest (proxy.c:200)
+==107==    by 0x10A939: doProxy (proxy.c:119)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==
+==107== 50 bytes in 5 blocks are still reachable in loss record 5 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==107==    by 0x490171A: strdup (strdup.c:42)
+==107==    by 0x10ACB9: parseRequest (proxy.c:185)
+==107==    by 0x10A939: doProxy (proxy.c:119)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==
+==107== 56 bytes in 1 blocks are still reachable in loss record 6 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)
+==107==    by 0x490171A: strdup (strdup.c:42)
+==107==    by 0x10ABFB: parseRequest (proxy.c:174)
+==107==    by 0x10A939: doProxy (proxy.c:119)
+==107==    by 0x10A855: proxy_thread (proxy.c:93)
+==107==    by 0x485BF26: start_thread (pthread_create.c:479)
+==107==    by 0x497131E: clone (clone.S:95)
+==107==
+==107== 56 bytes in 2 blocks are still reachable in loss record 7 of 17
+==107==    at 0x483677F: malloc (vg_replace_malloc.c:309)

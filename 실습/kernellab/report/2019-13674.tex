@@ -1,0 +1,141 @@
+\documentclass{report}
+\usepackage{graphicx}
+\usepackage{kotex}
+\usepackage{lipsum}
+\usepackage{listings}
+\usepackage{graphicx}
+\usepackage[a4paper, total={6in, 10in}]{geometry}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{color}
+\usepackage{minted}
+\usepackage{hyperref}
+\renewcommand{\thesection}{\arabic{section}}
+
+\title{시스템 프로그래밍 과제 4 kernellab 레포트 \\
+\large Kernel Lab: Linux Module Programming}
+\date{}
+\author{
+  2019-13674\\
+  양현서 \\
+  바이오시스템소재학부\\
+}
+\lstset{
+    basicstyle=\ttfamily\small,
+    numberstyle=\footnotesize,
+    numbers=left,
+    frame=single,
+    tabsize=2,
+    title=\lstname,
+    keywordstyle={\color{blue}}
+    escapeinside={\%*}{*)},
+    breaklines=true,
+    breakatwhitespace=true,
+    framextopmargin=2pt,
+    framexbottommargin=2pt,
+    extendedchars=false,
+    inputencoding=utf8
+}
+\hypersetup{
+    colorlinks,
+    linkcolor={red!50!black},
+    citecolor={blue!50!black},
+    urlcolor={blue!80!black}
+}
+
+\makeatletter
+\AtBeginEnvironment{minted}{\dontdofcolorbox}
+\def\dontdofcolorbox{\renewcommand\fcolorbox[4][]{##4}}
+\makeatother
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\section{Introduction}
+\paragraph{}
+ 리눅스 운영체제의 커널은 여러 가지 기능을 담고 있는데, 사용자가 간혹 커널 레벨에서만 실행할 수 있는 기능들을 추가하고 싶을 수 있다. 리눅스 커널은 오픈 소스이기 때문에 커널 소스 코드를 수정하고 재 컴파일할 수 있지만, 이러한 작은 기능들을 추가할 때마다 커널 소스코드를 재 컴파일하여 설치하는 것은 비효율적이고 번거롭다. 따라서 리눅스 커널은 동적으로 커널에 기능을 추가하거나 제거하는 기능을 만들어 두었는데, 이것이 loadable kernel module이다. 이번 랩에서는 프로세스 트리를 출력하는 loadable kernel module을 만들어 보면서 리눅스 커널의 다양한 구조체들을 이용하는 법을 공부한다. 또한 수업 시간에 virtual memory에 대해 배웠는데, virtual memory 주소를 직접 커널 데이터 구조 엔트리들을 따라가며 physical memory 주소로 변환하는 모듈 제작도 공부해 본다. 
+
+\section{Part 1: ptree}
+과제에는 paddr와 ptree 가 있는데, ptree부터 구현하였다. ptree는 프로세스 트리 정보를 얻어올 수 있는 커널 모듈이다. debug file system의 ptree 디렉토리 안의 input에 정보를 얻고 싶은 프로세스의 pid를 echo 하면, ptree 디렉토리 안의 ptree 파일을 읽어 해당 프로세스의 프로세스 트리의 최상위 부모 프로세스까지의 정보를 알아올 수 있다. 이번 랩에서는 pid = 1인 init 또는 systemd 프로세스까지 출력하기로 하였다.
+\subsection{Step 1. 커널 모듈의 구조 구현}
+이 내용은 ptree와 paddr 뿐만 아니라 대부분의 커널 모듈에 공통으로 적용된다. 
+\inputminted[firstline=170,lastline=171, linenos, breaklines]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+이와 같은 문장으로 모듈의 초기화와 정리 함수를 지정해 준다.
+
+초기화 함수에서는 모듈의 초기화를 진행하고 정리 함수에서는 모듈을 정리하는 역할을 한다. debugfs를 사용하는 커널 모듈의 초기화 함수에서 눈여겨볼 것이 하나 있는데, \lstinline{debugfs_create_file} 을 호출할 때 어떤 구조체의 포인터를 넘겨준다는 것이다. 이 구조체에는 리눅스에서 유저 프로그램이 read, write 등의 함수를 호출했을 때의 각각에 대응하는 함수들을 지정할 수 있다. 커널 모듈 개발자는 이를 통해 함수명 지정 문제에서 해방될 수 있다. 참고로, 윈도우 커널 모듈도 리눅스 커널 모듈과 같이 비슷한 초기화 과정을 거친다.
+
+\inputminted[firstline=147,lastline=147, linenos, breaklines]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+\inputminted[firstline=125,lastline=128, linenos, breaklines]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+
+\subsection{Step 2. debug file system 만들기}
+\lstinline{/sys/kernel/debug/ptree}에 ptree와 input 파일을 만드는 것이 스펙이다. 따라서 디버그 파일 시스템에 ptree 디렉토리를 만들고, input과 ptree라는 파일을 만든다. 그런데 input은 pid를 받기 적합하도록 32비트 부호 없는 정수를 받을 수 있는 파일을 만드는 \lstinline{debugfs_create_u32}함수를 이용하였다. 읽고 쓸 수 있도록 666 퍼미션을 주었다. 이 파일은 전역 변수인 pid와 연동되게 하였다. ptree는 나중에 생각해 보니 \lstinline{debugfs_create_blob}를 사용해도 괜찮을 것 같지만, 그냥 일반적인 \lstinline{debugfs_create_file} 함수를 이용하여 평범한 디버그 파일을 만들었다. 쓰기는 금지하고 읽기를 허용하기 위해 444 퍼미션을 주었고, 이것의 이 파일의 읽기 핸들러를 지정하기 위해 위에서 설명한 \lstinline{dbfs_fops}의 포인터를 주었다. 이렇게 하면 cat 명령에서 read를 호출할 시 지정한 함수가 실행된다.
+
+\inputminted[firstline=130,lastline=157, linenos, breaklines]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+
+\subsection{Step 3. read 함수 구현}
+이 ptree 구현에서는, \lstinline{read}에 대응하는 함수에서 대부분의 핵심 로직을 수행한다. \\
+이 함수에 전달되는 인자는 \lstinline{(struct file *fp, char __user * user_buffer, size_t length, loff_t *position)} 인데 이는 각각 파일 포인터, 데이터 버퍼, 그 크기, 읽을 위치를 저장하는 long 타입 변수이다. 디버그용으로 매개변수들을 printk해 보았는데, \lstinline{size_t}는 \lstinline{%zu}를 사용하고, pid는 \lstinline{%ld} 서식 문자를 사용한다는 것을 \href{https://www.kernel.org/doc/Documentation/printk-formats.txt}{kernel.org}에서 알았다.
+
+뼈대 코드에서는 \lstinline{sscanf(user_buffer, "%u", &input_pid);}를 통해 \lstinline{input_pid}를 얻어왔지만, 이 구현에서는 input파일 자체가 pid와 연결되어 있어서 단순히 과거 pid 변수와 현재 pid 변수를 비교하여, 다를 경우 프로세스 트리 탐색 결과를 저장하는 \lstinline{buffer} 문자열 캐시를 무효화하고 새로운 pid를 \lstinline{input_pid}에 복사하였다.
+\inputminted[firstline=16,lastline=30, linenos, breaklines,obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+이렇게 하면 모듈이 올라와 있고 여러 번 pid가 변경될 때 기존의 내용을 지우고 새로운 내용을 알려줄 수 있게 된다.
+\inputminted[firstline=31,lastline=36, linenos, breaklines,obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+
+\lstinline{find_get_pid}와 \lstinline{pid_task}를 이용하여 \lstinline{task_struct}에 대한 포인터를 얻었다.
+\inputminted[firstline=37,lastline=37, linenos, breaklines]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+이 \lstinline{if}문은 \lstinline{write_pid_to_input}가 여러 번 불렸을 때, 즉 \lstinline{cat} 명령이 한 번에 모든 내용을 읽지 못하여 \lstinline{read}를 여러 번 호출했을 때 최초 한 번만 내용을 초기화하기 위한 것이다. (캐시 역할)
+\inputminted[firstline=38,lastline=50, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+프로세스의 최상위 부모 프로세스까지 거슬러 올라가고 그 내용을 얻어와야 한다. 그런데 먼저, 결과로 할 전체 문자열을 담기 위해 동적 메모리 할당이 필요하고, 역순으로 담기 위해 각 문자열의 길이가 필요한데, 이 문자열의 길이를 담을 변수의 개수도 동적이므로 우선 프로세스의 개수를 센다. 처음에는 \lstinline{task_struct->parent}가 \lstinline{NULL}일 때 그 트리의 최상위 노드에 도달하는 줄 알았지만, 계속되는 무한루프로 검색을 해 본 결과 \lstinline{task_struct->parent}와 자신이 같을 때가 최상위 프로세스 노드였다. 그런데 이렇게 작성하여 결과를 보니, swapper 이라는 pid 0 프로세스가 최상위 노드였다. 그런데 이번 랩에서는 pid가 1인 init 프로세스가 최상위 노드로 출력되도록 하는 것이었으므로, pid=1인 프로세스까지만 개수를 센다.
+\inputminted[firstline=51,lastline=67, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+이번에는 위에서 구한 개수를 바탕으로 할당받은 int 배열에 출력 문자열의 예상 길이들을 저장한다. snprintf의 buffer에 NULL, length에 0을 주면 결과값으로 해당 문자열의 예상 길이가 나오므로 그것을 저장한다. \lstinline{needed}변수는 이 과정에서 필요한 총 메모리를 계산하게 된다.
+\inputminted[firstline=68,lastline=69, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+\lstinline{NULL}문자를 저장하기 위한 공간을 마련한다.
+\inputminted[firstline=70,lastline=96, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+이전까지 계산한 \lstinline{needed}에 따라 필요한 공간을 할당하고, 다시 \lstinline{task_struct}의 parent를 이용해 순회하며 그 프로세스의 커맨드라인과 pid를 알아내 형식에 맞게 메모리에 출력한다.
+\inputminted[firstline=97,lastline=100, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+임시로 할당받은 메모리를 해제하고, \lstinline{NULL}문자를 붙이는 등 정리와 기타 변수 초기화를 한다.
+\inputminted[firstline=102,lastline=111, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+메모리가 오염되지 않도록 복사할 메모리의 크기를 계산한 후, \lstinline{copy_to_user} 함수를 호출하여 유저 영역으로 데이터를 복사한다. 복사된 바이트수와 복사 실패한 바이트수를 계산하여 다음에 이용하게 하고, 복사된 바이트수를 리턴한다.
+\subsection{Step 4. 마무리 함수 구현}
+\inputminted[firstline=159,lastline=169, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/ptree/dbfs_ptree.c}
+할당받았던 메모리를 해제하고 디버그 파일 시스템을 제거한다. 이것은 paddr도 비슷하다.
+
+\section{Part 2: paddr}
+
+ptree 다음에 paddr를 구현하여 좀 더 수월하게 paddr를 진행할 수 있었다. paddr는 Virtual memory 주소에서 Physical Memory 주소를 알 수 있게 해 주는 커널 모듈이다. debug file system의 paddr 디렉토리 안의 output에 적절한 정보를 이용한 read를 수행하면, 유저 버퍼에 주어진 virtual address에서 변환된 physical address가 저장되어 있다.
+ 
+\subsection{Step 1. debug file system 만들기}
+\inputminted[firstline=54,lastline=77, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+output 파일을 만들기 위해 \lstinline{debugfs_create_file} 함수를 이용하였고,  읽고 쓸 수 있어야 하므로 퍼미션을 777로 지정하였다.
+
+\subsection{Step 2. read 함수 구현}
+우선 유저 프로그램과 정확하게 데이터를 주고받기 위해 유저 프로그램에 있는 \lstinline{struct packet} 구조체를 선언하였다.
+\inputminted[firstline=12,lastline=16, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+\lstinline{copy_from_user}를 이용해 사용자가 전달한 정보를 이 커널 모듈의 스택의 구조체에 복사하였다.
+\inputminted[firstline=19,lastline=27, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+\lstinline{find_get_pid}와 \lstinline{pid_task} 함수를 호출하여 \lstinline{task_struct}를 구하고, 이를 이용해 해당 프로세스의 \lstinline{mm_struct}를 구했다.
+\inputminted[firstline=28,lastline=30, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+프로세스의 \lstinline{mm}구조체에는 \lstinline{pgd}라는 page directory entry 배열의 시작주소를 저장하는 변수가 있다. 주어진 virtual memory address의 비트들을 \lstinline{PAGE_SHIFT} 단위로 잘라서 시프트하여, 각 배열에서 원하는 하위 엔트리의 인덱스를 구하는 과정을 반복하면 물리적 메모리 주소를 찾을 수 있다.
+다음과 같이 \lstinline{mm}에서 해당 virtual address에 해당하는 page directory entry의 주소를 알아오고, 그 결과를 이용해 해당하는 p4d(page 4 directory), pud(page upper directory), pmd(page middle directory), pte(page table entry)의 주소를 차례대로 알아온다.
+\inputminted[firstline=31,lastline=37, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+원래는 pgd, pud, pmd, pte 순으로 얻어오는 4 level paging에 맞추어 구현을 했었는데, 빌드 시 오류가 나서 확인해보니 5 level paging 방식을 사용해야 한다고 하여 중간에 p4d라는 것을 이용해야 한다는 것을 알았다. 좀 더 조사해 보니 리눅스 커널 4.14부터 5 level paging을 지원하기 시작하였고, 5 level paging 기능이 꺼져있을 때는 p4d와 pgd가 같게 하는 식으로 실질적으로는 4 level paging을 수행한다. \footnote[1]{https://elixir.bootlin.com/linux/latest/source/arch/x86/include/asm/pgtable.h\#L971}
+
+38-42행에서는 위에서 얻은 정보를 이용하여 physical address를 계산한다. 먼저 virtual address의 하위 12비트(offset)를 \lstinline{~PAGE_MASK}와 AND 연산하여 알아낸다. \lstinline{pte_val}을 이용하여 앞에서 구한 Page table entry의 값을 알아내고, 방금 구한 offset과 합친다. 여기서 얻은 결과가 물리적 메모리의 주소와 아주 조금만 다르다.
+최상위비트가 1로 설정되어있다는 것이다. etl 게시판에 질문한 결과로 알아낸 것은 해당 비트가 설정되어 있으면 \href{https://software.intel.com/content/dam/develop/public/us/en/documents/253668-sdm-vol-3a.pdf\#page=128}{해당 페이지의 내용은 실행이 금지되어 있다는 뜻이었다.} 따라서 순수 주소값을 구하기 위해 해당 비트를 클리어해 주었다. 이 랩에서 하위 48비트만 사용하게 하였다.
+\inputminted[firstline=38,lastline=42, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+이후 \lstinline{copy_to_user} 함수를 이용해 사용자 측에 정보를 복사하고 함수를 종료한다.
+\inputminted[firstline=43,lastline=48, linenos, breaklines, obeytabs=true,tabsize=4]{C}{../kernellab-handout-done/paddr/dbfs_paddr.c}
+
+
+\section{Conclusion}
+\subsection{어려웠던 점}
+\subsubsection{재부팅}
+초반에 결과가 이상하게 나올 때나 무한루프가 생겼을 때, 작업하는 모듈이 커널 모듈이라서 재부팅을 반드시 해야 하는 상황들이 자주 생겼다. 이것 때문에 테스트하는 데 걸리는 시간이 일반 프로그램보다 길었다.
+
+
+\subsection{놀라웠던 점}
+리눅스의 소스 코드가 공개되어 있어서 이러한 종류의 커널 모듈을 개발하는데 생각보다 어렵지 않게 해결할 수 있었다.
+
+
+\end{document}
